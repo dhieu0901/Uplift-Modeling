@@ -1,0 +1,4 @@
+﻿arm,policy,target_rate_pct,sample_size,expected_visit_rate_offline
+A,transformed_outcome,5.0,355256,0.04297032469333333
+B,response_model,5.0,355256,0.0410685436
+H,no_campaign_holdout,0.0,147273,0.038201
