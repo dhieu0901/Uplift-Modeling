@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
-
-from src.evaluation.uplift import budget_policy_table
 
 
 def uplift_score_threshold(
@@ -34,24 +32,6 @@ def target_by_expected_value(
         raise ValueError("uplift_score must contain only finite values.")
     threshold = uplift_score_threshold(outcome_value, treatment_cost)
     return score > threshold
-
-
-def cost_benefit_policy_table(
-    y: Sequence[float],
-    treatment: Sequence[int],
-    scores: Mapping[str, Sequence[float]],
-    outcome_value: float,
-    treatment_cost: float,
-    fractions: Sequence[float] = (0.05, 0.10, 0.20, 0.30),
-) -> pd.DataFrame:
-    """Evaluate the net value of ranking policies at each budget."""
-    base_table = budget_policy_table(
-        y,
-        treatment,
-        scores,
-        fractions=fractions,
-    )
-    return monetize_policy_table(base_table, outcome_value, treatment_cost)
 
 
 def monetize_policy_table(
