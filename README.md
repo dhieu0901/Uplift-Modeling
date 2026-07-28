@@ -50,20 +50,27 @@ V(pi) - V(0) = E[pi(X) * (Y(1) - Y(0))]
 AUUC is a secondary ranking diagnostic. The operational decision uses the
 paired policy-value contrast at the fixed 5% budget.
 
-## Technical References
+## Implementation-to-Source Map
 
-These sources document the methods implemented in the project:
+Each source below was checked against the implementation. The scope column
+states exactly what is reused; it does not imply that this project reproduces
+the source's experiments or results.
 
-- Criteo uplift dataset and benchmark:
-  [Diemert et al., *A Large Scale Benchmark for Individual Treatment Effect Prediction and Uplift Modeling*](https://arxiv.org/abs/2111.10106)
-- S-, T-, and X-learners:
-  [Künzel et al., *Meta-learners for Estimating Heterogeneous Treatment Effects using Machine Learning*](https://arxiv.org/abs/1706.03461)
-- Cross-fitting and double machine learning:
-  [Chernozhukov et al., *Double/debiased Machine Learning for Treatment and Structural Parameters*](https://academic.oup.com/ectj/article/21/1/C1/5056401)
-- Doubly robust policy evaluation:
-  [Dudík, Langford, and Li, *Doubly Robust Policy Evaluation and Learning*](https://arxiv.org/abs/1103.4601)
-- Rare-outcome uplift modeling:
-  [Nyberg et al., *Uplift Modeling with High Class Imbalance*](https://proceedings.mlr.press/v157/nyberg21a.html)
+| Project component | Source | Verified use |
+|---|---|---|
+| Criteo data and benchmark metric | [Diemert et al., *A Large Scale Benchmark for Individual Treatment Effect Prediction and Uplift Modeling*](https://arxiv.org/abs/2111.10106) | Dataset schema, randomized benchmark setting, and the separate relative AUUC convention used in `src/data/criteo.py` and `src/evaluation/uplift.py`. |
+| S-, T-, and X-learners | [Künzel et al., *Metalearners for Estimating Heterogeneous Treatment Effects using Machine Learning*](https://arxiv.org/abs/1706.03461) | Direct match for the one-model S-learner, arm-specific T-learner, and the X-learner's imputation, second-stage effect models, and propensity-weighted combination. |
+| Class-variable transformation | [Jaśkowski and Jaroszewicz, *Uplift Modeling for Clinical Trial Data*](https://people.cs.pitt.edu/~milos/icml_clinicaldata_2012/Papers/Oral_Jaroszewitz_ICML_Clinical_2012.pdf) | Direct match for `Z = 1(Y = T)`, `uplift = 2P(Z=1\|X)-1`, and treatment-arm reweighting when assignment is unbalanced. |
+| Modified outcome | [Athey and Imbens, *Recursive Partitioning for Heterogeneous Causal Effects*](https://pmc.ncbi.nlm.nih.gov/articles/PMC4941430/) | Direct match for the transformed target `Y(T-e) / [e(1-e)]` used by `ModifiedOutcomeModel` and the calibration pseudo-outcome. |
+| R-learner | [Nie and Wager, *Quasi-Oracle Estimation of Heterogeneous Treatment Effects*](https://arxiv.org/abs/1712.04912) | Direct match for cross-fitted nuisance estimates and R-loss minimization, implemented as weighted regression of `(Y-m(X))/(T-e)` with weights `(T-e)^2`. |
+| DR-learner | [Kennedy, *Towards Optimal Doubly Robust Estimation of Heterogeneous Causal Effects*](https://arxiv.org/abs/2004.14497) | Direct match for the cross-fitted doubly robust pseudo-outcome and second-stage CATE regression. |
+| Cross-fitting safeguard | [Chernozhukov et al., *Double/debiased Machine Learning for Treatment and Structural Parameters*](https://academic.oup.com/ectj/article/21/1/C1/5056401) | Source for the sample-splitting and out-of-fold nuisance-prediction pattern. The repository does not claim to implement the paper's complete DML estimator. |
+| Fixed-policy evaluation | [Dudík, Langford, and Li, *Doubly Robust Policy Evaluation and Learning*](https://arxiv.org/abs/1103.4601) | The AIPW value in `src/evaluation/policy_value.py` is the binary-action, no-treatment-reference specialization of doubly robust policy value. |
+| Rare-outcome handling | [Nyberg, Kuśmierczyk, and Klami, *Uplift Modeling with High Class Imbalance*](https://proceedings.mlr.press/v157/nyberg21a.html) | Direct match for treatment-stratified negative undersampling, the low-rate CVT factor correction, and transformed-outcome isotonic calibration. The T-learner's exact case-control probability inversion is an implementation-specific correction, not attributed to this paper. |
+
+The disjoint audit construction, 5% selection rule, paired decision criterion,
+semi-synthetic response surface, online-test design, and project conclusions
+are project-specific choices rather than results taken from these sources.
 
 ## Repository
 

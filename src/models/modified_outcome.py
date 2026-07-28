@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 
 @dataclass
 class ModifiedOutcomeModel:
-    """Modified-outcome learner from the Criteo benchmark.
+    """Transformed-outcome learner for randomized treatment.
 
     The regression target is Y(T-e)/(e(1-e)). In a randomized experiment where
     propensity e is independent of X, the conditional expectation of this target

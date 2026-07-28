@@ -78,7 +78,8 @@ def aipw_policy_value_table(
     """Estimate incremental outcomes for fixed-budget policies using AIPW.
 
     The estimand is the value of each targeting policy relative to treating
-    nobody. Confidence intervals use the influence-score standard error and
+    nobody. This is the binary-action specialization of doubly robust policy
+    value. Confidence intervals use the influence-score standard error and
     condition on the already-fitted policy.
     """
     pseudo_outcome = doubly_robust_treatment_effect_scores(

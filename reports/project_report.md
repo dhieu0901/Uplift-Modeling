@@ -319,16 +319,21 @@ Primary artifacts:
 
 ## Technical Foundations
 
-The implementation uses established methods. Source links are provided for
-technical context:
+The references support specific implementation components; the project does
+not reproduce their experiments or borrow their reported results.
 
-- Cross-fitting and double machine learning:
-  [Chernozhukov et al. (2018)](https://academic.oup.com/ectj/article/21/1/C1/5056401)
-- Criteo uplift dataset and benchmark:
-  [Diemert et al. (2021)](https://arxiv.org/abs/2111.10106)
-- Doubly robust policy evaluation:
-  [Dudík, Langford, and Li (2011)](https://arxiv.org/abs/1103.4601)
-- S-, T-, and X-learners:
-  [Künzel et al. (2019)](https://arxiv.org/abs/1706.03461)
-- Rare-outcome uplift modeling:
-  [Nyberg et al. (2021)](https://proceedings.mlr.press/v157/nyberg21a.html)
+| Component | Source | Relationship to this project |
+|---|---|---|
+| Criteo data and relative AUUC | [Diemert et al. (2021)](https://arxiv.org/abs/2111.10106) | Dataset and benchmark convention. |
+| S-, T-, and X-learners | [Künzel et al. (2019)](https://arxiv.org/abs/1706.03461) | Direct algorithm implementation. |
+| CVT | [Jaśkowski and Jaroszewicz (2012)](https://people.cs.pitt.edu/~milos/icml_clinicaldata_2012/Papers/Oral_Jaroszewitz_ICML_Clinical_2012.pdf) | Direct transformed-class identity and treatment-arm reweighting. |
+| Modified outcome | [Athey and Imbens (2016)](https://pmc.ncbi.nlm.nih.gov/articles/PMC4941430/) | Direct transformed-outcome formula. |
+| R-learner | [Nie and Wager (2021)](https://arxiv.org/abs/1712.04912) | Direct cross-fitted R-loss implementation. |
+| DR-learner | [Kennedy (2020)](https://arxiv.org/abs/2004.14497) | Direct doubly robust pseudo-outcome regression. |
+| Cross-fitting | [Chernozhukov et al. (2018)](https://academic.oup.com/ectj/article/21/1/C1/5056401) | Sample-splitting and out-of-fold nuisance-estimation pattern, not a claim of implementing the complete DML estimator. |
+| Policy value | [Dudík, Langford, and Li (2011)](https://arxiv.org/abs/1103.4601) | Doubly robust policy evaluation specialized to binary treatment and a no-treatment reference. |
+| Rare-outcome training and calibration | [Nyberg, Kuśmierczyk, and Klami (2021)](https://proceedings.mlr.press/v157/nyberg21a.html) | Treatment-stratified undersampling, low-rate CVT correction, and transformed-outcome isotonic calibration. |
+
+The audit split, fixed 5% budget, model-selection rule, paired confidence-bound
+criterion, semi-synthetic response surface, online experiment design, and all
+project conclusions were developed within this repository.

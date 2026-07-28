@@ -12,7 +12,7 @@ from src.models.cross_fitting import cross_fitted_potential_outcomes
 
 @dataclass
 class DRLearner:
-    """Cross-fitted doubly robust learner for CATE prediction."""
+    """Cross-fitted doubly robust pseudo-outcome regression for CATE."""
 
     effect_model: object | None = None
     outcome_model_factory: Callable[[int], object] | None = None
