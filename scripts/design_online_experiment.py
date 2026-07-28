@@ -33,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--input-path",
-        default="reports/tables/audit_visit_test.csv",
+        default="outputs/tables/audit_visit_test.csv",
     )
     parser.add_argument("--policy-a", default="s_learner")
     parser.add_argument("--policy-b", default="response_model")
@@ -44,10 +44,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--planning-effect-fraction", type=float, default=0.75)
     parser.add_argument("--buffer-fraction", type=float, default=0.15)
     parser.add_argument(
-        "--report-path", default="reports/online_experiment_design.md"
+        "--report-path", default="outputs/online_experiment_design.md"
     )
     parser.add_argument(
-        "--arms-path", default="reports/tables/online_experiment_arms.csv"
+        "--arms-path", default="outputs/tables/online_experiment_arms.csv"
     )
     return parser.parse_args()
 
@@ -346,7 +346,7 @@ policy and collect more data instead of declaring the policies equivalent.
 
 ## Reproducible Output
 
-- Allocation table: `reports/tables/online_experiment_arms.csv`
+- Allocation table: `outputs/tables/online_experiment_arms.csv`
 """
 
 

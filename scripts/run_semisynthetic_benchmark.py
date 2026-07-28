@@ -61,23 +61,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--random-state", type=int, default=42)
     parser.add_argument(
         "--report-path",
-        default="reports/semisynthetic_benchmark.md",
+        default="outputs/semisynthetic_benchmark.md",
     )
     parser.add_argument(
         "--metrics-path",
-        default="reports/tables/semisynthetic_cate_metrics.csv",
+        default="outputs/tables/semisynthetic_cate_metrics.csv",
     )
     parser.add_argument(
         "--selection-path",
-        default="reports/tables/semisynthetic_selection.csv",
+        default="outputs/tables/semisynthetic_selection.csv",
     )
     parser.add_argument(
         "--policy-path",
-        default="reports/tables/semisynthetic_policy_truth.csv",
+        default="outputs/tables/semisynthetic_policy_truth.csv",
     )
     parser.add_argument(
         "--figure-path",
-        default="reports/figures/semisynthetic_policy_truth.png",
+        default="outputs/figures/semisynthetic_policy_truth.png",
     )
     return parser.parse_args()
 

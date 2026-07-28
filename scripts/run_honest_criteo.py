@@ -134,21 +134,21 @@ def main() -> None:
     prefix = f"criteo_{args.outcome}_honest"
     validation_path = ROOT / (
         args.validation_path
-        or f"reports/generated/{prefix}_validation.csv"
+        or f"outputs/{prefix}_validation.csv"
     )
     test_path = ROOT / (
-        args.test_path or f"reports/generated/{prefix}_test.csv"
+        args.test_path or f"outputs/{prefix}_test.csv"
     )
     contrast_path = ROOT / (
         args.contrast_path
-        or f"reports/generated/{prefix}_contrasts.csv"
+        or f"outputs/{prefix}_contrasts.csv"
     )
     figure_path = ROOT / (
         args.figure_path
-        or f"reports/generated/figures/{prefix}_policy_value.png"
+        or f"outputs/figures/{prefix}_policy_value.png"
     )
     report_path = ROOT / (
-        args.report_path or f"reports/generated/{prefix}.md"
+        args.report_path or f"outputs/{prefix}.md"
     )
     for path in (validation_path, test_path, contrast_path, figure_path, report_path):
         path.parent.mkdir(parents=True, exist_ok=True)

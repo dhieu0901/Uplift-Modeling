@@ -58,15 +58,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--primary-budget", type=float, default=0.05)
     parser.add_argument(
         "--report-path",
-        default="reports/visit_stability.md",
+        default="outputs/visit_stability.md",
     )
     parser.add_argument(
         "--results-path",
-        default="reports/tables/visit_stability.csv",
+        default="outputs/tables/visit_stability.csv",
     )
     parser.add_argument(
         "--figure-path",
-        default="reports/figures/visit_stability.png",
+        default="outputs/figures/visit_stability.png",
     )
     return parser.parse_args()
 
@@ -162,14 +162,14 @@ def main() -> None:
 
     prefix = f"criteo_{args.outcome}_honest_stability"
     results_path = ROOT / (
-        args.results_path or f"reports/generated/{prefix}.csv"
+        args.results_path or f"outputs/{prefix}.csv"
     )
     figure_path = ROOT / (
         args.figure_path
-        or f"reports/generated/figures/{prefix}.png"
+        or f"outputs/figures/{prefix}.png"
     )
     report_path = ROOT / (
-        args.report_path or f"reports/generated/{prefix}.md"
+        args.report_path or f"outputs/{prefix}.md"
     )
     for path in (results_path, figure_path, report_path):
         path.parent.mkdir(parents=True, exist_ok=True)

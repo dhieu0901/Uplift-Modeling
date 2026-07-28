@@ -50,7 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--random-state", type=int, default=777)
     parser.add_argument(
         "--report-path",
-        default="reports/audit_sample.md",
+        default="outputs/audit_sample.md",
     )
     return parser.parse_args()
 

@@ -78,15 +78,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--treatment-cost", type=float, default=5.0)
     parser.add_argument(
         "--report-path",
-        default="reports/conversion_uplift_calibration.md",
+        default="outputs/conversion_uplift_calibration.md",
     )
     parser.add_argument(
         "--bins-path",
-        default="reports/tables/conversion_uplift_calibration_bins.csv",
+        default="outputs/tables/conversion_uplift_calibration_bins.csv",
     )
     parser.add_argument(
         "--figure-path",
-        default="reports/figures/conversion_uplift_calibration.png",
+        default="outputs/figures/conversion_uplift_calibration.png",
     )
     return parser.parse_args()
 

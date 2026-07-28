@@ -69,40 +69,184 @@ modified-outcome, R-, and doubly robust learners. These models are comparison
 tools inside the project; the objective is a defensible campaign decision, not
 to reproduce or extend a research paper.
 
-## Decision Metric
+## Evaluation Design
 
-For targeting policy `pi(X)`, the project estimates incremental value relative
-to treating nobody:
+The source dataset contains 13,979,592 randomized observations. Three
+development datasets serve different purposes:
+
+| Dataset | Rows | Role |
+|---|---:|---|
+| Visit development sample | 500,000 | Repeated-split stability |
+| Conversion development sample | 2,000,000 | Undersampling and calibration |
+| Disjoint audit sample | 1,000,000 | Final model selection and locked evaluation |
+
+The audit sample has an 84.59% treatment rate, 4.89% visit rate, and 0.31%
+conversion rate. Complete-row hashes confirm zero overlap with both development
+samples.
+
+Each canonical experiment reserves 80% for development and 20% as a locked
+test. Three joint treatment/outcome-stratified development folds create
+out-of-fold candidate scores and nuisance predictions. The candidate with the
+largest lower endpoint of the paired 95% confidence interval against response
+targeting at the 5% budget is selected, refitted on all development data, and
+evaluated once on the locked test.
+
+For targeting policy `pi(X)`, incremental value relative to treating nobody is:
 
 ```text
 V(pi) - V(0) = E[pi(X) * (Y(1) - Y(0))]
 ```
 
-AUUC remains a secondary ranking diagnostic. The primary decision compares the
-uplift and response policies on the same users at the pre-specified 5% budget.
+The doubly robust treatment-effect score is:
 
-## Results and Decision
+```text
+phi =
+    mu_1(X) - mu_0(X)
+    + T / e * (Y - mu_1(X))
+    - (1 - T) / (1 - e) * (Y - mu_0(X))
+```
 
-The visit workflow selected the S-learner using three-fold out-of-fold
-development predictions. On the locked 200,000-row audit test:
+Policy value is the mean of `pi(X) * phi`. The primary paired contrast uses
+`[pi_uplift(X) - pi_response(X)] * phi`, so uncertainty is driven by users on
+whom the two policies disagree. AUUC remains a secondary ranking diagnostic.
 
-| Policy contrast at 5% | Estimated difference | 95% CI | Decision |
-|---|---:|---:|---|
-| S-learner minus response targeting | +168.5 visits | [-53.0, 390.0] | Online challenger test |
-| Undersampled T-learner minus response targeting | -47.1 conversions | [-104.6, 10.3] | Keep response targeting |
+## Reproduced Results
 
-The visit estimate is directionally promising, but its interval includes zero.
-Across ten repeated honest splits, 9/10 point estimates were positive and only
-1/10 intervals were wholly positive. This is enough to justify a controlled
-online challenger, not a production rollout or ROI claim.
+All results below are the checked-in snapshot from the commands in
+[Reproduction](#reproduction). Generated tables, reports, and figures are
+written to the git-ignored `outputs/` directory.
 
-For conversion, the uplift candidate was also significantly worse at budgets
-from 10% through 30%. Response targeting therefore remains the current
-conversion policy.
+### Visit model selection
 
-Read the [project report](reports/project_report.md), the
-[locked evaluation protocol](reports/evaluation_protocol.md), and the
-[evidence index](reports/README.md).
+On 800,000 audit-development users, the 5% out-of-fold policy comparison
+selected the S-learner. These values perform selection only; they are not the
+final effect estimates.
+
+| Candidate | Difference vs response | 95% CI |
+|---|---:|---:|
+| S-learner | +1,001.1 visits | [565.3, 1,436.9] |
+| T-learner | +613.9 | [160.3, 1,067.5] |
+| Modified outcome | +545.7 | [136.3, 955.1] |
+| DR-learner | +465.1 | [27.5, 902.6] |
+| X-learner | +346.1 | [-90.3, 782.4] |
+| R-learner | +254.9 | [-182.0, 691.8] |
+| CVT | -1,332.1 | [-1,764.2, -900.0] |
+
+### Visit locked test
+
+The selected S-learner and response baseline were refitted, then compared on
+the untouched 200,000-row audit test:
+
+| Budget | S-learner value | Response value | Paired difference | 95% CI |
+|---:|---:|---:|---:|---:|
+| 5% | 949.8 | 781.3 | +168.5 visits | [-53.0, 390.0] |
+| 10% | 1,355.4 | 1,289.1 | +66.3 | [-114.8, 247.4] |
+| 20% | 1,647.3 | 1,617.5 | +29.8 | [-76.6, 136.2] |
+| 30% | 1,689.8 | 1,689.7 | +0.1 | [-83.2, 83.4] |
+
+The pre-specified 5% point estimate favors the S-learner, but its interval
+includes zero. Full-ranking relative AUUC is 0.010943 for the S-learner and
+0.011249 for response targeting, illustrating why the local budget decision
+need not match the global ranking metric.
+
+### Visit stability
+
+Ten complete train/selection/test repetitions on the 500,000-row sample
+retrained the already selected S-learner:
+
+| Runs | Mean difference per 100,000 users | Standard deviation | Range | Positive estimates | Wholly positive CIs |
+|---:|---:|---:|---:|---:|---:|
+| 10 | +93.6 visits | 62.7 | -37.7 to +183.1 | 9/10 | 1/10 |
+
+The direction is reasonably stable, but interval evidence remains weak. The
+splits overlap and are sensitivity analyses rather than independent
+replications.
+
+### Rare conversion
+
+Treatment-stratified negative undersampling tested factors 1, 5, 10, 25, 50,
+100, and 200 for T- and CVT-based learners. The conservative development rule
+selected the T-learner with factor 5:
+
+| Evaluation stage at 5% | T-learner k=5 minus response | 95% CI |
+|---|---:|---:|
+| Out-of-fold development | -35.7 conversions | [-131.8, 60.3] |
+| Internal locked holdout | -2.5 | [-55.3, 50.3] |
+| Disjoint audit test | -47.1 | [-104.6, 10.3] |
+
+On the disjoint audit, the budget sensitivity was:
+
+| Budget | T-learner k=5 minus response | 95% CI |
+|---:|---:|---:|
+| 5% | -47.1 conversions | [-104.6, 10.3] |
+| 10% | -57.7 | [-106.1, -9.4] |
+| 20% | -58.2 | [-100.6, -15.9] |
+| 30% | -65.2 | [-106.8, -23.7] |
+
+Response targeting remains the conversion policy.
+
+### Conversion calibration
+
+An independent calibration holdout improved score magnitude without materially
+changing ranking:
+
+| Score | EUCE | MUCE | Calibration intercept | Calibration slope | Relative AUUC |
+|---|---:|---:|---:|---:|---:|
+| Raw | 0.000629 | 0.003435 | -0.000380 | 1.576 | 0.001067 |
+| Isotonic calibrated | 0.000298 | 0.001210 | -0.000048 | 1.024 | 0.001070 |
+
+Calibration therefore improves absolute interpretation, not demonstrated
+policy value.
+
+### Semi-synthetic ground-truth check
+
+The semi-synthetic benchmark uses real Criteo covariates with known nonlinear
+potential outcomes and CATE. Exact policy value at the 5% budget was:
+
+| Policy | PEHE | Spearman with true CATE | True incremental outcomes | Oracle value |
+|---|---:|---:|---:|---:|
+| Oracle | 0.0000 | 1.000 | 61.61 | 100.0% |
+| Modified outcome | 0.0043 | 0.850 | 54.08 | 87.8% |
+| S-learner | 0.0102 | 0.605 | 45.97 | 74.6% |
+| X-learner | 0.0139 | 0.528 | 45.00 | 73.0% |
+| T-learner | 0.0222 | 0.401 | 43.79 | 71.1% |
+| CVT | 0.0461 | 0.393 | 42.57 | 69.1% |
+| R-learner | 0.0218 | 0.455 | 41.08 | 66.7% |
+| DR-learner | 0.0211 | 0.463 | 40.83 | 66.3% |
+| Response | 0.0536 | 0.304 | 39.83 | 64.6% |
+
+Observed out-of-fold AIPW selection chose CVT because it had the least-negative
+lower confidence bound, while exact ground truth favored modified outcome.
+This stress test shows that finite-sample policy selection can mis-rank models
+even when the evaluation estimator is well motivated.
+
+### Online challenger design
+
+The proposed experiment retains 75% of the offline S-versus-response effect,
+uses 80% power, two-sided 5% significance, and a 15% operational buffer:
+
+| Arm | Policy | Target rate | Users | Expected offline visit rate |
+|---|---|---:|---:|---:|
+| A | S-learner | 5% | 1,837,713 | 0.042950 |
+| B | Response targeting | 5% | 1,837,713 | 0.042108 |
+| H | No-campaign holdout | 0% | 80,106 | 0.038201 |
+| **Total** |  |  | **3,755,532** |  |
+
+Users are randomized to complete policy arms before ranking. The primary
+analysis is the intention-to-treat A-minus-B visit-rate difference across all
+assigned users, not a comparison of the two targeted subsets.
+
+## Final Decision
+
+- **Visit:** advance the locked S-learner to a randomized online challenger;
+  do not deploy from offline evidence alone.
+- **Conversion:** keep response targeting; the selected uplift candidate is
+  inferior on the audit.
+- **Economics:** make no ROI claim until real outcome value and campaign cost
+  are available.
+- **Historical result:** the earlier 66.3% visit-improvement claim reused test
+  evidence for selection and reporting and remains exploratory, not the current
+  headline.
 
 ## Selected References
 
@@ -121,13 +265,69 @@ online-test plan, and conclusions are project-specific.
 
 ```text
 .
-|-- reports/      # Project report, protocol, evidence, tables, and figures
-|-- scripts/      # Reproducible command-line workflows
-|-- src/          # Data, models, evaluation, and experiment code
-`-- tests/        # Unit and integration tests
+|-- .gitignore
+|-- README.md
+|-- requirements.txt
+|-- data/                       # Local raw/processed data; git-ignored
+|-- scripts/
+|   |-- prepare_criteo.py
+|   |-- prepare_audit_sample.py
+|   |-- run_honest_criteo.py
+|   |-- run_honest_stability.py
+|   |-- analyze_uplift_calibration.py
+|   |-- run_semisynthetic_benchmark.py
+|   `-- design_online_experiment.py
+|-- src/
+|   |-- __init__.py
+|   |-- data/
+|   |   |-- __init__.py
+|   |   |-- criteo.py
+|   |   |-- imbalance.py
+|   |   `-- semisynthetic.py
+|   |-- models/
+|   |   |-- __init__.py
+|   |   |-- base.py
+|   |   |-- registry.py
+|   |   |-- response_model.py
+|   |   |-- s_learner.py
+|   |   |-- t_learner.py
+|   |   |-- x_learner.py
+|   |   |-- cvt_learner.py
+|   |   |-- modified_outcome.py
+|   |   |-- r_learner.py
+|   |   |-- dr_learner.py
+|   |   |-- cross_fitting.py
+|   |   |-- undersampled.py
+|   |   `-- uplift_calibration.py
+|   |-- evaluation/
+|   |   |-- __init__.py
+|   |   |-- uplift.py
+|   |   |-- policy_value.py
+|   |   |-- calibration.py
+|   |   |-- ground_truth.py
+|   |   `-- experiment_design.py
+|   |-- experiments/
+|   |   |-- __init__.py
+|   |   |-- splitting.py
+|   |   `-- honest_uplift.py
+|   `-- reporting.py
+|-- tests/
+|   |-- test_criteo_loader.py
+|   |-- test_direct_uplift_models.py
+|   |-- test_experiment_design.py
+|   |-- test_honest_experiment.py
+|   |-- test_honest_splitting.py
+|   |-- test_imbalance.py
+|   |-- test_model_registry.py
+|   |-- test_policy_value.py
+|   |-- test_semisynthetic.py
+|   |-- test_uplift_calibration.py
+|   `-- test_uplift_evaluation.py
+`-- outputs/                    # Generated by scripts; git-ignored
 ```
 
-Raw and processed data are intentionally excluded from version control.
+Raw data, processed data, and generated outputs are intentionally excluded from
+version control.
 
 ## Reproduction
 
@@ -168,11 +368,11 @@ Visit audit:
 .\.venv\Scripts\python.exe scripts\run_honest_criteo.py `
   --sample-path data\processed\criteo_audit_1m.parquet `
   --outcome visit --selection-folds 3 --random-state 777 `
-  --report-path reports\audit_visit_evaluation.md `
-  --validation-path reports\tables\audit_visit_selection.csv `
-  --test-path reports\tables\audit_visit_test.csv `
-  --contrast-path reports\tables\audit_visit_contrasts.csv `
-  --figure-path reports\figures\audit_visit_policy_value.png
+  --report-path outputs\audit_visit_evaluation.md `
+  --validation-path outputs\tables\audit_visit_selection.csv `
+  --test-path outputs\tables\audit_visit_test.csv `
+  --contrast-path outputs\tables\audit_visit_contrasts.csv `
+  --figure-path outputs\figures\audit_visit_policy_value.png
 
 .\.venv\Scripts\python.exe scripts\run_honest_stability.py
 ```
@@ -184,21 +384,21 @@ Conversion development, audit, and calibration:
   --sample-path data\processed\criteo_sample_2m.parquet `
   --outcome conversion --models response_model --selection-folds 3 `
   --undersampling-factors 1,5,10,25,50,100,200 `
-  --report-path reports\rare_conversion_development.md `
-  --validation-path reports\tables\rare_conversion_selection.csv `
-  --test-path reports\tables\rare_conversion_internal_holdout.csv `
-  --contrast-path reports\tables\rare_conversion_internal_contrasts.csv `
-  --figure-path reports\figures\rare_conversion_development.png
+  --report-path outputs\rare_conversion_development.md `
+  --validation-path outputs\tables\rare_conversion_selection.csv `
+  --test-path outputs\tables\rare_conversion_internal_holdout.csv `
+  --contrast-path outputs\tables\rare_conversion_internal_contrasts.csv `
+  --figure-path outputs\figures\rare_conversion_development.png
 
 .\.venv\Scripts\python.exe scripts\run_honest_criteo.py `
   --sample-path data\processed\criteo_audit_1m.parquet `
   --outcome conversion --models response_model --selection-folds 3 `
   --undersampling-factors 5 --undersampling-families t --random-state 777 `
-  --report-path reports\audit_conversion_evaluation.md `
-  --validation-path reports\tables\audit_conversion_selection.csv `
-  --test-path reports\tables\audit_conversion_test.csv `
-  --contrast-path reports\tables\audit_conversion_contrasts.csv `
-  --figure-path reports\figures\audit_conversion_policy_value.png
+  --report-path outputs\audit_conversion_evaluation.md `
+  --validation-path outputs\tables\audit_conversion_selection.csv `
+  --test-path outputs\tables\audit_conversion_test.csv `
+  --contrast-path outputs\tables\audit_conversion_contrasts.csv `
+  --figure-path outputs\figures\audit_conversion_policy_value.png
 
 .\.venv\Scripts\python.exe scripts\analyze_uplift_calibration.py
 ```

@@ -5,6 +5,6 @@
 /.pytest_cache/
 /.pytest-tmp/
 /.ruff_cache/
-/reports/generated/
+/outputs/
 __pycache__/
 *.py[cod]
