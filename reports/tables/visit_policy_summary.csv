@@ -1,9 +1,0 @@
-policy,budget_pct,n_targeted,incremental_outcome
-transformed_outcome,5.0,7500,715.398704
-transformed_outcome,10.0,15000,907.783638
-transformed_outcome,20.0,30000,1073.496254
-transformed_outcome,30.0,45000,1241.086505
-response_model,5.0,7500,430.131540
-response_model,10.0,15000,700.756225
-response_model,20.0,30000,1026.331335
-response_model,30.0,45000,1222.942697

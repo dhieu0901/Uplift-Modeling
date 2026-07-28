@@ -1,79 +1,89 @@
-# Randomized Online-Experiment Design
+# Randomized Experiment Design for the Targeting Policy
 
 ## Objective
 
-Compare MOM and response targeting at the same 5% budget. The primary estimand is the intention-to-treat difference in visit rate across all users assigned to the two policy arms.
+Directly compare `s_learner` with `response_model` at the same
+`5.0%` budget. The primary estimand is the
+**intention-to-treat difference** in visit rate across all users assigned to
+each policy arm.
 
-## Planning Assumptions
+## Sample-Size Assumptions
 
-| Item | Value |
-|---|---:|
-| No-campaign visit rate | 0.038201 |
-| Offline MOM arm rate | 0.042970 |
-| Offline response arm rate | 0.041069 |
-| Offline A–B difference | 0.001902 |
-| Retained online effect | 75% |
-| Planning difference | 0.001426 |
-| Significance level | 0.05, two-sided |
-| Power | 80% |
-| Buffer | 15% |
+- Offline source: `reports/tables/audit_visit_test.csv` on a test population of 200,000 users.
+- No-campaign visit rate: `0.038201`.
+- Implied visit rates for arms A/B: `0.042950` / `0.042108`.
+- Offline A-B difference: `0.000842`.
+- Planning effect retains `75%` of the offline difference: `0.000632`.
+- Two-sided test, alpha `0.05`, power `80%`.
+- Buffer for attrition/logging loss: `15%`.
+
+The unbuffered sample size for each policy arm is 1,598,011. The
+holdout size is calculated conservatively from the response-policy versus
+no-campaign comparison: 69,657.
 
 ## Proposed Allocation
 
-| Arm | Policy | Target rate | Planned users |
-|---|---|---:|---:|
-| A | MOM ranking | 5% | 355,256 |
-| B | Response ranking | 5% | 355,256 |
-| H | No-campaign holdout | 0% | 147,273 |
+| Arm | Policy              | Target rate | Users     | Offline visit rate |
+| --- | ------------------- | ----------- | --------- | ------------------ |
+| A   | s_learner           | 5%          | 1,837,713 | 0.042950           |
+| B   | response_model      | 5%          | 1,837,713 | 0.042108           |
+| H   | no_campaign_holdout | 0%          | 80,106    | 0.038201           |
 
-Total planned cohort: **857,785 users**.
+Proposed total cohort: **3,755,532 users**. Each policy arm has
+1,837,713 users and is expected to target approximately
+91,886 / 91,886 users. The holdout contains
+80,106 users who receive no campaign during the measurement window.
 
-## Effect-Size Sensitivity
+## Sensitivity Analysis by Online Effect Size
 
-| Offline effect retained | Difference to detect | Users per policy arm before buffer | Users per arm after buffer |
-|---:|---:|---:|---:|
-| 100% | 0.001902 | 174,712 | 200,919 |
-| 75% | 0.001426 | 308,918 | 355,256 |
-| 50% | 0.000951 | 691,284 | 794,977 |
+| Effect retained | Difference | Users per arm | Users per arm with buffer |
+| --------------- | ---------- | ------------- | ------------------------- |
+| 100%            | 0.000842   | 901,012       | 1,036,164                 |
+| 75%             | 0.000632   | 1,598,011     | 1,837,713                 |
+| 50%             | 0.000421   | 3,586,996     | 4,125,046                 |
 
-Smaller online effects require substantially more traffic. The 75% case is the default design; the 50% case is safer when traffic permits.
+The required sample size grows rapidly when the online effect is smaller than
+the offline estimate. The default design assumes 75% effect retention; if traffic
+allows, the 50% scenario is safer.
 
-## Randomization
+## Randomization Procedure
 
-1. Lock eligibility, observation window, and campaign exclusions.
-2. Randomize users into A, B, and H before applying either ranking policy.
-3. Score A and B independently and target the top 5% within each arm.
-4. Keep channel, creative, timing, frequency cap, and costs equal across A and B.
-5. Log assignment, score, targeting decision, delivery, outcome, and campaign cost.
+1. Finalize eligibility and the observation window; exclude users in
+   conflicting campaigns.
+2. Randomize deterministically by user ID into A, B, and H **before applying
+   ranking policies**.
+3. Score A and B independently, then target exactly the top
+   5.0% within each arm.
+4. Use the same channel, creative, send time, frequency cap, and treatment
+   cost for A/B.
+5. Keep assignment fixed; log assignment, score, treatment delivered, and
+   outcome.
 
-Do not compare only targeted users: each policy selects a different population, so that comparison would break randomization.
+Do not compare only the two targeted subsets, because each policy selects a
+different population and that comparison breaks randomization.
 
 ## Analysis Plan
 
-- Primary: A–B visit-rate difference with a 95% confidence interval, analyzed by intention to treat.
-- Secondary: A–H and B–H incremental visits, conversion, and full-arm net value.
-- Guardrails: unsubscribe, complaints, contact frequency, and total cost.
-- Data quality: sample-ratio mismatch, missing outcomes, duplicate users, and holdout contamination.
-- Reporting: absolute effect, relative lift, confidence interval, and net value—not the p-value alone.
+- Primary: A-B visit-rate difference with a 95% confidence interval, analyzed
+  by ITT.
+- Secondary: incremental visits versus H, conversion rate, and net value for
+  the full arm.
+- Guardrails: unsubscribe/opt-out, complaints, contact frequency, and campaign
+  cost.
+- Report absolute difference, relative lift, and confidence interval, not only
+  the p-value.
+- Lock sample size and the measurement window before launch; do not stop early
+  based on p-values.
+- Check sample-ratio mismatch, contamination, and missing outcomes before
+  interpreting lift.
 
-Sample size and the observation window must be locked before launch. Synthetic data may test the analyzer but cannot support a rollout decision.
+## Decision Criteria
 
-## Analyzer Input
+Roll out `s_learner` only when A beats B on the primary KPI, net value is
+positive, guardrails do not deteriorate, and the result is not driven by a
+small subgroup. If A-B is inconclusive but both beat H, retain the current
+policy and collect more data instead of declaring the policies equivalent.
 
-The aggregate input contains one row per randomized arm.
+## Reproducible Output
 
-| Column | Meaning |
-|---|---|
-| `arm` | Arm identifier. |
-| `assigned_n` | Users assigned to the arm. |
-| `outcome_observed_n` | Users with an observed outcome. |
-| `outcomes` | Positive outcomes. |
-| `targeted_n` | Users selected by the policy. |
-| `treatment_received_n` | Users who received treatment. |
-| `total_campaign_cost` | Campaign cost, if available. |
-
-Assignment defines the primary analysis; delivery counts are used for compliance checks.
-
-## Decision Rule
-
-Roll out MOM only if A beats B on the primary KPI, net value is positive, and guardrails remain acceptable. If A–B is inconclusive, retain the current policy and collect more data.
+- Allocation table: `reports/tables/online_experiment_arms.csv`

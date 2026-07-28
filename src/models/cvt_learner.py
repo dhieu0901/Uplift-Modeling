@@ -5,7 +5,11 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from src.models.base import make_classifier, predict_positive_proba
+from src.models.base import (
+    fit_with_sample_weight,
+    make_classifier,
+    predict_positive_proba,
+)
 
 
 @dataclass
@@ -45,7 +49,12 @@ class CVTLearner:
                 0.5 / self.propensity_,
                 0.5 / (1.0 - self.propensity_),
             )
-        self.model.fit(X, transformed_class, sample_weight=sample_weight)
+        fit_with_sample_weight(
+            self.model,
+            X,
+            transformed_class,
+            sample_weight,
+        )
         return self
 
     def predict_uplift(self, X: pd.DataFrame) -> np.ndarray:

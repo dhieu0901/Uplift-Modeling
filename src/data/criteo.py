@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,14 +30,6 @@ class CriteoDataset:
     raw: pd.DataFrame
     feature_columns: list[str]
     outcome: str
-
-
-@dataclass(frozen=True)
-class CriteoSummary:
-    """Dataset-level and treatment-arm statistics."""
-
-    overall: pd.DataFrame
-    by_treatment: pd.DataFrame
 
 
 def prepare_criteo_sample(
@@ -76,53 +69,80 @@ def prepare_criteo_sample(
     return output_path
 
 
-def summarize_criteo(
-    raw_path: str | Path = "data/criteo-uplift-v2.1.csv.gz",
-) -> CriteoSummary:
-    """Scan the full Criteo dataset once to calculate outcome and treatment rates."""
+def prepare_criteo_audit_sample(
+    raw_path: str | Path,
+    excluded_sample_paths: Sequence[str | Path],
+    output_path: str | Path = "data/processed/criteo_audit_1m.parquet",
+    sample_size: int = 1_000_000,
+    random_state: int = 777,
+    force: bool = False,
+) -> Path:
+    """Create a confirmatory sample disjoint from prior samples by row hash.
+
+    Every row whose complete benchmark-column hash appears in an excluded
+    Parquet sample is removed before reservoir sampling. Hash collisions are
+    theoretically possible but negligible for this audit use; excluding
+    duplicate-valued rows is conservative.
+    """
+    if sample_size <= 0:
+        raise ValueError("sample_size must be greater than zero.")
+    if not excluded_sample_paths:
+        raise ValueError("At least one excluded sample path is required.")
+
     raw_path = _require_file(raw_path)
+    excluded_paths = [_require_file(path) for path in excluded_sample_paths]
+    if any(path.suffix.lower() != ".parquet" for path in excluded_paths):
+        raise ValueError("Every excluded sample must be a Parquet file.")
+    output_path = Path(output_path)
+    if output_path.exists() and not force:
+        return output_path
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     duckdb = _import_duckdb()
     raw_sql = _sql_path(raw_path)
+    output_sql = _sql_path(output_path)
+    hash_expression = f"hash({', '.join(CRITEO_REQUIRED_COLUMNS)})"
+    raw_hash_expression = (
+        f"hash({', '.join(f'raw.{column}' for column in CRITEO_REQUIRED_COLUMNS)})"
+    )
+    excluded_queries = [
+        (
+            f"SELECT {hash_expression} AS row_hash "
+            f"FROM read_parquet('{_sql_path(path)}')"
+        )
+        for path in excluded_paths
+    ]
+    excluded_sql = " UNION ".join(excluded_queries)
 
     with duckdb.connect() as connection:
         columns = _read_csv_columns(connection, raw_sql)
         _validate_columns(columns)
-        by_treatment = connection.execute(
+        if output_path.exists() and force:
+            output_path.unlink()
+        connection.execute(
             f"""
-            SELECT
-                treatment,
-                count(*) AS n,
-                avg(visit) AS visit_rate,
-                avg(conversion) AS conversion_rate,
-                avg(exposure) AS exposure_rate,
-                sum(visit) AS visits,
-                sum(conversion) AS conversions
-            FROM read_csv_auto('{raw_sql}', header = true, compression = 'gzip')
-            GROUP BY treatment
-            ORDER BY treatment
+            COPY (
+                WITH excluded_hashes AS (
+                    {excluded_sql}
+                ),
+                available AS (
+                    SELECT {", ".join(f"raw.{column}" for column in CRITEO_REQUIRED_COLUMNS)}
+                    FROM read_csv_auto(
+                        '{raw_sql}',
+                        header = true,
+                        compression = 'gzip'
+                    ) AS raw
+                    ANTI JOIN excluded_hashes
+                    ON {raw_hash_expression} = excluded_hashes.row_hash
+                )
+                SELECT *
+                FROM available
+                USING SAMPLE reservoir({int(sample_size)} ROWS)
+                REPEATABLE ({int(random_state)})
+            ) TO '{output_sql}' (FORMAT PARQUET, COMPRESSION ZSTD)
             """
-        ).fetch_df()
-
-    n = int(by_treatment["n"].sum())
-    treated_n = int(by_treatment.loc[by_treatment["treatment"] == 1, "n"].sum())
-    overall = pd.DataFrame(
-        [
-            {
-                "n": n,
-                "treatment_rate": treated_n / n,
-                "visit_rate": by_treatment["visits"].sum() / n,
-                "conversion_rate": by_treatment["conversions"].sum() / n,
-                "exposure_rate": (
-                    by_treatment["exposure_rate"] * by_treatment["n"]
-                ).sum()
-                / n,
-                "visits": int(by_treatment["visits"].sum()),
-                "conversions": int(by_treatment["conversions"].sum()),
-            }
-        ]
-    )
-
-    return CriteoSummary(overall=overall, by_treatment=by_treatment)
+        )
+    return output_path
 
 
 def load_criteo(
@@ -156,13 +176,6 @@ def load_criteo(
         feature_columns=CRITEO_FEATURE_COLUMNS.copy(),
         outcome=outcome,
     )
-
-
-def feature_summary(df: pd.DataFrame) -> pd.DataFrame:
-    """Summarize distributions and missing rates for the 12 anonymized features."""
-    summary = df[CRITEO_FEATURE_COLUMNS].describe(percentiles=[0.01, 0.5, 0.99]).T
-    summary["missing_rate"] = df[CRITEO_FEATURE_COLUMNS].isna().mean()
-    return summary[["count", "mean", "std", "min", "1%", "50%", "99%", "max", "missing_rate"]]
 
 
 def subsample_criteo(

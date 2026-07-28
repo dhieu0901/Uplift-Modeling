@@ -2,6 +2,9 @@ import numpy as np
 import pandas as pd
 
 from src.evaluation.policy_value import (
+    aipw_policy_contrast_table,
+    aipw_policy_value_table,
+    doubly_robust_treatment_effect_scores,
     monetize_policy_table,
     select_best_campaign,
     target_by_expected_value,
@@ -71,3 +74,71 @@ def test_select_best_campaign_returns_highest_positive_value():
 
     assert best["policy"] == "b"
     assert best["budget_pct"] == 10.0
+
+
+def test_aipw_scores_equal_known_effect_with_perfect_nuisance_models():
+    treatment = np.array([0, 1, 0, 1])
+    mu0 = np.zeros(4)
+    mu1 = np.array([1.0, 0.0, 1.0, 0.0])
+    y = np.where(treatment == 1, mu1, mu0)
+
+    scores = doubly_robust_treatment_effect_scores(
+        y,
+        treatment,
+        mu0,
+        mu1,
+        propensity=0.5,
+    )
+
+    np.testing.assert_allclose(scores, mu1 - mu0)
+
+
+def test_aipw_policy_table_estimates_incremental_outcomes_and_interval():
+    y = np.array([0, 1, 0, 1])
+    treatment = np.array([0, 1, 0, 1])
+    mu0 = np.zeros(4)
+    mu1 = np.ones(4)
+    scores = {"uplift": np.array([0.9, 0.8, 0.2, 0.1])}
+
+    result = aipw_policy_value_table(
+        y,
+        treatment,
+        scores,
+        mu0,
+        mu1,
+        propensity=0.5,
+        fractions=(0.5,),
+        outcome_value=10.0,
+        treatment_cost=1.0,
+    ).iloc[0]
+
+    assert result["n_targeted"] == 2
+    assert result["incremental_outcome"] == 2.0
+    assert result["ci_lower"] < result["incremental_outcome"]
+    assert result["ci_upper"] > result["incremental_outcome"]
+    assert result["net_value"] == 18.0
+
+
+def test_aipw_policy_contrast_is_paired():
+    treatment = np.array([0, 1, 0, 1])
+    mu0 = np.zeros(4)
+    mu1 = np.array([1.0, 0.0, 1.0, 0.0])
+    y = np.where(treatment == 1, mu1, mu0)
+    scores = {
+        "oracle": np.array([1.0, 0.0, 0.9, 0.1]),
+        "response": np.array([0.0, 1.0, 0.1, 0.9]),
+    }
+
+    result = aipw_policy_contrast_table(
+        y,
+        treatment,
+        scores,
+        reference_policy="response",
+        mu0=mu0,
+        mu1=mu1,
+        propensity=0.5,
+        fractions=(0.5,),
+    ).iloc[0]
+
+    assert result["policy"] == "oracle"
+    assert result["difference"] == 2.0

@@ -105,6 +105,8 @@ def summarize_uplift_calibration(calibration_table: pd.DataFrame) -> dict[str, f
             "weighted_bias": float("nan"),
             "weighted_mae": float("nan"),
             "weighted_rmse": float("nan"),
+            "euce": float("nan"),
+            "muce": float("nan"),
             "calibration_intercept": float("nan"),
             "calibration_slope": float("nan"),
         }
@@ -116,6 +118,7 @@ def summarize_uplift_calibration(calibration_table: pd.DataFrame) -> dict[str, f
     weighted_bias = float(np.average(errors, weights=weights))
     weighted_mae = float(np.average(np.abs(errors), weights=weights))
     weighted_rmse = float(np.sqrt(np.average(errors**2, weights=weights)))
+    muce = float(np.max(np.abs(errors)))
 
     if np.ptp(predicted) == 0:
         intercept = slope = float("nan")
@@ -133,6 +136,8 @@ def summarize_uplift_calibration(calibration_table: pd.DataFrame) -> dict[str, f
         "weighted_bias": weighted_bias,
         "weighted_mae": weighted_mae,
         "weighted_rmse": weighted_rmse,
+        "euce": weighted_mae,
+        "muce": muce,
         "calibration_intercept": intercept,
         "calibration_slope": slope,
     }

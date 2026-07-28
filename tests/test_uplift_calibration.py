@@ -51,5 +51,7 @@ def test_calibration_summary_is_ideal_when_prediction_matches_observation():
     assert np.isclose(result["weighted_bias"], 0.0)
     assert np.isclose(result["weighted_mae"], 0.0)
     assert np.isclose(result["weighted_rmse"], 0.0)
+    assert np.isclose(result["euce"], 0.0)
+    assert np.isclose(result["muce"], 0.0)
     assert np.isclose(result["calibration_intercept"], 0.0)
     assert np.isclose(result["calibration_slope"], 1.0)

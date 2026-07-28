@@ -4,6 +4,7 @@ from typing import Any
 
 import numpy as np
 from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
+from sklearn.pipeline import Pipeline
 
 
 def make_classifier(random_state: int = 42, **kwargs: Any):
@@ -77,3 +78,17 @@ def predict_positive_proba(model, X) -> np.ndarray:
         return proba
     prediction = model.predict(X)
     return np.asarray(prediction, dtype=float)
+
+
+def fit_with_sample_weight(model, X, y, sample_weight):
+    """Fit estimators and sklearn pipelines with a common weight interface."""
+    if sample_weight is None:
+        return model.fit(X, y)
+    if isinstance(model, Pipeline):
+        final_step_name = model.steps[-1][0]
+        return model.fit(
+            X,
+            y,
+            **{f"{final_step_name}__sample_weight": sample_weight},
+        )
+    return model.fit(X, y, sample_weight=sample_weight)

@@ -3,6 +3,8 @@
 /.venv/
 /venv/
 /.pytest_cache/
+/.pytest-tmp/
+/.ruff_cache/
 /reports/generated/
 __pycache__/
 *.py[cod]

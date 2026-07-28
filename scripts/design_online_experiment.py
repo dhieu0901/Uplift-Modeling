@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import argparse
@@ -31,9 +33,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--input-path",
-        default="reports/tables/visit_policy_summary.csv",
+        default="reports/tables/audit_visit_test.csv",
     )
-    parser.add_argument("--policy-a", default="transformed_outcome")
+    parser.add_argument("--policy-a", default="s_learner")
     parser.add_argument("--policy-b", default="response_model")
     parser.add_argument("--budget-pct", type=float, default=5.0)
     parser.add_argument("--no-campaign-rate", type=float, default=0.038201)
@@ -227,6 +229,42 @@ def build_report(
     holdout_sample = int(arms.loc[arms["arm"] == "H", "sample_size"].iloc[0])
     approximate_targets_a = ceil(primary_sample * args.budget_pct / 100.0)
     approximate_targets_b = ceil(primary_sample * args.budget_pct / 100.0)
+    arms_display = arms.rename(
+        columns={
+            "arm": "Arm",
+            "policy": "Policy",
+            "target_rate_pct": "Target rate",
+            "sample_size": "Users",
+            "expected_visit_rate_offline": "Offline visit rate",
+        }
+    ).copy()
+    arms_display["Target rate"] = arms_display["Target rate"].map(
+        lambda value: f"{value:.0f}%"
+    )
+    arms_display["Users"] = arms_display["Users"].map(
+        lambda value: f"{value:,}"
+    )
+    arms_display["Offline visit rate"] = arms_display[
+        "Offline visit rate"
+    ].map(lambda value: f"{value:.6f}")
+    sensitivity_display = sensitivity.rename(
+        columns={
+            "effect_retained_pct": "Effect retained",
+            "planned_absolute_difference": "Difference",
+            "sample_per_policy_arm": "Users per arm",
+            "sample_with_buffer": "Users per arm with buffer",
+        }
+    ).copy()
+    sensitivity_display["Effect retained"] = sensitivity_display[
+        "Effect retained"
+    ].map(lambda value: f"{value:.0f}%")
+    sensitivity_display["Difference"] = sensitivity_display["Difference"].map(
+        lambda value: f"{value:.6f}"
+    )
+    for column in ("Users per arm", "Users per arm with buffer"):
+        sensitivity_display[column] = sensitivity_display[column].map(
+            lambda value: f"{value:,}"
+        )
 
     return f"""# Randomized Experiment Design for the Targeting Policy
 
@@ -234,7 +272,8 @@ def build_report(
 
 Directly compare `{args.policy_a}` with `{args.policy_b}` at the same
 `{args.budget_pct:.1f}%` budget. The primary estimand is the
-**intention-to-treat difference** in visit rate across all users assigned to each policy arm.
+**intention-to-treat difference** in visit rate across all users assigned to
+each policy arm.
 
 ## Sample-Size Assumptions
 
@@ -252,7 +291,7 @@ no-campaign comparison: {holdout_unbuffered:,}.
 
 ## Proposed Allocation
 
-{dataframe_to_markdown(arms)}
+{dataframe_to_markdown(arms_display)}
 
 Proposed total cohort: **{total_sample:,} users**. Each policy arm has
 {primary_sample:,} users and is expected to target approximately
@@ -261,7 +300,7 @@ Proposed total cohort: **{total_sample:,} users**. Each policy arm has
 
 ## Sensitivity Analysis by Online Effect Size
 
-{dataframe_to_markdown(sensitivity)}
+{dataframe_to_markdown(sensitivity_display)}
 
 The required sample size grows rapidly when the online effect is smaller than
 the offline estimate. The default design assumes 75% effect retention; if traffic
@@ -269,30 +308,45 @@ allows, the 50% scenario is safer.
 
 ## Randomization Procedure
 
-1. Finalize eligibility and the observation window, and exclude users in conflicting campaigns.
-2. Randomize deterministically by user ID into A, B, and H **before applying ranking policies**.
-3. Score A and B independently, then target exactly the top {args.budget_pct:.1f}% within each arm.
-4. Use the same channel, creative, send time, frequency cap, and treatment cost for A/B.
-5. Keep assignment fixed; log assignment, score, treatment delivered, and outcome.
+1. Finalize eligibility and the observation window; exclude users in
+   conflicting campaigns.
+2. Randomize deterministically by user ID into A, B, and H **before applying
+   ranking policies**.
+3. Score A and B independently, then target exactly the top
+   {args.budget_pct:.1f}% within each arm.
+4. Use the same channel, creative, send time, frequency cap, and treatment
+   cost for A/B.
+5. Keep assignment fixed; log assignment, score, treatment delivered, and
+   outcome.
 
 Do not compare only the two targeted subsets, because each policy selects a
 different population and that comparison breaks randomization.
 
 ## Analysis Plan
 
-- Primary: A-B visit-rate difference with a 95% confidence interval, analyzed by ITT.
-- Secondary: incremental visits versus H, conversion rate, and net value for the full arm.
-- Guardrails: unsubscribe/opt-out, complaints, contact frequency, and campaign cost.
-- Report absolute difference, relative lift, and confidence interval—not only the p-value.
-- Lock sample size and the measurement window before launch; do not stop early based on p-values.
-- Check sample-ratio mismatch, contamination, and missing outcomes before interpreting lift.
+- Primary: A-B visit-rate difference with a 95% confidence interval, analyzed
+  by ITT.
+- Secondary: incremental visits versus H, conversion rate, and net value for
+  the full arm.
+- Guardrails: unsubscribe/opt-out, complaints, contact frequency, and campaign
+  cost.
+- Report absolute difference, relative lift, and confidence interval, not only
+  the p-value.
+- Lock sample size and the measurement window before launch; do not stop early
+  based on p-values.
+- Check sample-ratio mismatch, contamination, and missing outcomes before
+  interpreting lift.
 
 ## Decision Criteria
 
-Roll out MOM when A beats B on the primary KPI, net value is positive, guardrails
-do not deteriorate, and the result is not driven by a small subgroup. If A-B is
-inconclusive but both beat H, retain the current policy and collect more data
-instead of declaring the two policies equivalent.
+Roll out `{args.policy_a}` only when A beats B on the primary KPI, net value is
+positive, guardrails do not deteriorate, and the result is not driven by a
+small subgroup. If A-B is inconclusive but both beat H, retain the current
+policy and collect more data instead of declaring the policies equivalent.
+
+## Reproducible Output
+
+- Allocation table: `reports/tables/online_experiment_arms.csv`
 """
 
 

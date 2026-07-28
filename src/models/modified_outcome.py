@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 
 @dataclass
 class ModifiedOutcomeModel:
-    """Modified Outcome Method (MOM) from the Criteo benchmark.
+    """Modified-outcome learner from the Criteo benchmark.
 
     The regression target is Y(T-e)/(e(1-e)). In a randomized experiment where
     propensity e is independent of X, the conditional expectation of this target
@@ -33,7 +33,9 @@ class ModifiedOutcomeModel:
         treatment_values = treatment.to_numpy(dtype=float)
         self.propensity_ = float(treatment_values.mean())
         if not 0.0 < self.propensity_ < 1.0:
-            raise ValueError("MOM requires both treatment and control observations.")
+            raise ValueError(
+                "Modified-outcome training requires treatment and control observations."
+            )
 
         transformed_outcome = y.to_numpy(dtype=float) * (
             treatment_values - self.propensity_

@@ -1,172 +1,72 @@
-# Uplift Modeling for Campaign Optimization
+# Honest Uplift Modeling for Campaign Optimization
 
-This project uses causal machine learning to identify customers whose behavior is likely to change because of a campaign. It compares uplift and response targeting at the same contact budget.
+A reproducible study of whether uplift ranking creates more incremental
+outcomes than response targeting at a fixed campaign budget.
 
-## Project Status
+> **Decision:** test the S-learner as an online challenger for visits. Keep
+> response targeting for conversion. The offline evidence does not support a
+> production rollout or an ROI claim.
 
-The offline pipeline covers data preparation, modeling, policy evaluation, calibration, economics, and online-experiment design. Production impact remains unverified until a live randomized experiment is completed.
+## Primary Result
 
-### Main result
+The model-selection protocol used three-fold out-of-fold development
+predictions and a disjoint one-million-row audit sample. At the pre-specified
+5% visit budget, the locked 200,000-row test produced:
 
-On the 500,000-row Criteo sample, the Modified Outcome Method (MOM) performs best for `visit` at low budgets. Results are averaged across seeds `42`, `123`, and `2026`, each with 150,000 test users.
+| Policy contrast | Incremental visits | 95% CI |
+|---|---:|---:|
+| S-learner minus response targeting | +168.5 | [-53.0, 390.0] |
 
-| Budget | MOM visits | Response visits | Gain | Improvement |
-|---:|---:|---:|---:|---:|
-| 5% | 715.40 | 430.13 | +285.27 | +66.32% |
-| 10% | 907.78 | 700.76 | +207.03 | +29.54% |
-| 20% | 1,073.50 | 1,026.33 | +47.16 | +4.60% |
-| 30% | 1,241.09 | 1,222.94 | +18.14 | +1.48% |
+The point estimate favors the S-learner, but the interval includes zero. Across
+ten repeated honest splits, 9/10 point estimates were positive and only 1/10
+confidence intervals was wholly positive. The result is promising, not
+confirmatory.
 
-Evidence is strongest at 5–10%. On the reference seed, the paired-bootstrap 95% intervals are `[180.03, 632.15]` at 5% and `[86.60, 589.11]` at 10%. Results at 20–30% are inconclusive.
+For conversion, the selected undersampled T-learner was worse than response
+targeting by 47.1 conversions at 5% and significantly worse at 10% through 30%.
 
-The tested uplift policies do not outperform response targeting for the rarer `conversion` outcome. Conversion is therefore treated as a secondary KPI and guardrail.
+Read the [research paper](reports/uplift_research_paper.md), the
+[pre-specified protocol](reports/methodology_protocol.md), and the
+[evidence index](reports/README.md).
 
-## Problem Definition
+## Research Design
 
-A response model estimates who is likely to produce an outcome:
+- Joint treatment/outcome-stratified development and locked-test partitions.
+- Three-fold out-of-fold model and policy selection.
+- Paired augmented inverse-propensity weighted policy contrasts.
+- A disjoint audit sample with zero row overlap with development samples.
+- S-, T-, X-, CVT-, modified-outcome, R-, and doubly robust learners.
+- Treatment-arm-specific undersampling and probability correction for rare
+  conversion.
+- A semi-synthetic benchmark with known CATE, PEHE, exact policy value, and
+  oracle regret.
 
-```text
-P(Y = 1 | X)
-```
-
-That score can prioritize users who would act without the campaign. Uplift modeling instead estimates the change caused by treatment.
-
-For each user, let `Y(1)` be the outcome under treatment and `Y(0)` the outcome under control. Only one is observed:
-
-```text
-Y = T * Y(1) + (1 - T) * Y(0)
-```
-
-Because an individual treatment effect cannot be observed directly, the model estimates the conditional average treatment effect:
-
-```text
-tau(x) = E[Y(1) - Y(0) | X = x]
-```
-
-The score separates four conceptual groups: persuadables, sure things, lost causes, and do-not-disturbs. These groups are useful for interpretation but are not observed labels.
-
-Valid causal interpretation relies on:
-
-- Random assignment or conditional unconfoundedness.
-- Positivity: comparable users can appear in both treatment arms.
-- Consistency between assigned treatment and observed outcome.
-- No material interference between users.
-- Pre-treatment features only.
-
-### Policy objective
-
-For a fixed budget, users are ranked by score and the top `k%` are targeted. Random, response, and uplift rankings are compared on the same test population.
-
-If an incremental outcome is worth `V` and one contact costs `C`, the user-level expected net value is:
+The primary estimand for targeting policy `pi(X)` is:
 
 ```text
-net_value(x) = tau(x) * V - C
-break_even_uplift = C / V
+V(pi) - V(0) = E[pi(X) * (Y(1) - Y(0))]
 ```
 
-An absolute threshold is meaningful only after score calibration. Otherwise, a fixed top-k policy is safer.
+AUUC is a secondary ranking diagnostic. The operational decision uses the
+paired policy-value contrast at the fixed 5% budget.
 
-## Data
-
-### Criteo Uplift Prediction Dataset v2.1
-
-| Attribute | Value |
-|---|---:|
-| Rows | 13,979,592 |
-| Features | 12 (`f0`–`f11`) |
-| Treatment rate | 85.00% |
-| Visit rate | 4.70% |
-| Conversion rate | 0.29% |
-
-Two reservoir samples support development and rare-outcome analysis:
-
-- `data/processed/criteo_sample_500k.parquet`: primary `visit` experiments.
-- `data/processed/criteo_sample_2m.parquet`: `conversion` robustness experiments.
-
-`exposure` is excluded because it is measured after treatment and would introduce leakage.
-
-### Hillstrom Email Dataset
-
-Hillstrom is a pipeline warm-up comparing `Mens E-Mail` with `No E-Mail` on `visit`. It validates the workflow but does not reproduce the paper's M/W models.
-
-## Methods
-
-| Method | Definition and role |
-|---|---|
-| Response model | Operational baseline trained on treated users and ranked by outcome probability. |
-| S-learner | Fits one model `mu(x,t)` and predicts `mu(x,1) - mu(x,0)`. |
-| T-learner | Fits separate treated and control outcome models, then subtracts their predictions. |
-| X-learner | Imputes treatment effects and fits second-stage effect models for both arms. |
-| CVT | Converts treatment and outcome into a classification target, with propensity correction for the 85/15 split. |
-| MOM | Regresses `Y(T-e)/(e(1-e))` on features, where `e` is treatment propensity. |
-
-LightGBM is the default nonlinear learner, with scikit-learn histogram gradient boosting as a fallback. MOM uses standardized features and Ridge regression.
-
-## Evaluation
-
-Experiments use joint treatment-outcome stratification and compare every policy on the same test population. Evaluation includes:
-
-- Incremental outcomes at fixed budgets of 5%, 10%, 20%, and 30%.
-- Cumulative uplift, Qini, and the Criteo separate relative AUUC.
-- Three-seed stability analysis.
-- Paired stratified bootstrap confidence intervals.
-- Exact curve and learner validation against `scikit-uplift`.
-
-For a selected group `S`, incremental outcomes are estimated from the randomized test data:
-
-```text
-gain(S) = |S| * (mean(Y | T=1, S) - mean(Y | T=0, S))
-```
-
-AUUC measures full-ranking quality. Incremental outcomes at the intended budget drive the policy decision.
-
-## Model Decision
-
-| Role | Choice | Reason |
-|---|---|---|
-| Primary visit policy | MOM, top 5% | Stable low-budget gain and fast fitting. |
-| Visit challenger | S-learner | Competitive nonlinear ranking. |
-| Conversion policy | Response model | Uplift models did not improve conversion. |
-| Academic baseline | CVT | Retained for comparison. |
-
-## Calibration and Economics
-
-Calibration uses independent 60%/20%/20% train, calibration, and test partitions. Isotonic regression improves score magnitude while largely preserving ranking.
-
-With illustrative values of `100` per incremental visit and `5` per contact, MOM at 5% has the highest estimated net value: `34,039.87`. Replace these inputs with actual unit economics before use.
-
-## Online Validation Plan
-
-The proposed randomized experiment compares:
-
-| Arm | Policy | Target rate | Planned users |
-|---|---|---:|---:|
-| A | MOM ranking | 5% | 355,256 |
-| B | Response ranking | 5% | 355,256 |
-| H | No-campaign holdout | 0% | 147,273 |
-
-The primary estimand is the intention-to-treat visit-rate difference between A and B. Checks cover allocation, missing outcomes, holdout contamination, uncertainty, and net value.
-
-## Repository Structure
+## Repository
 
 ```text
 .
-├── data/                  # Raw and processed datasets
-├── reports/               # Final reports, figures, tables, and weekly logs
-├── scripts/               # Reproducible command-line workflows
-├── src/
-│   ├── data/              # Dataset loaders
-│   ├── evaluation/        # Uplift metrics and bootstrap
-│   ├── experiments/       # Calibration and online analysis
-│   └── models/            # Baseline and uplift learners
-├── tests/                 # Automated tests
-├── README.md
-└── requirements.txt
+|-- reports/      # Paper, protocol, evidence appendices, tables, and figures
+|-- scripts/      # Reproducible command-line workflows
+|-- src/          # Data, models, evaluation, and experiment code
+`-- tests/        # Unit and integration tests
 ```
 
-## Setup
+Raw and processed data are intentionally excluded from version control.
+
+## Reproduction
 
 Python 3.11 or 3.12 is recommended.
+
+### 1. Install
 
 ```powershell
 python -m venv .venv
@@ -174,73 +74,86 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-## Reproduce the Pipeline
+### 2. Prepare data
+
+Place the Criteo Uplift Prediction Dataset v2.1 at
+`data/criteo-uplift-v2.1.csv.gz`, then run:
 
 ```powershell
-# Prepare Criteo data and EDA
-.\.venv\Scripts\python.exe scripts\prepare_criteo.py
+.\.venv\Scripts\python.exe scripts\prepare_criteo.py `
+  --sample-size 500000 `
+  --sample-path data\processed\criteo_sample_500k.parquet `
+  --random-state 42
 
-# Validate the workflow on Hillstrom
-.\.venv\Scripts\python.exe scripts\run_hillstrom.py
+.\.venv\Scripts\python.exe scripts\prepare_criteo.py `
+  --sample-size 2000000 `
+  --sample-path data\processed\criteo_sample_2m.parquet `
+  --random-state 42
 
-# Run the main Criteo experiment
-.\.venv\Scripts\python.exe scripts\run_criteo.py
-
-# Run stability and bootstrap analysis
-.\.venv\Scripts\python.exe scripts\run_criteo_stability.py --policies transformed_outcome
-
-# Validate against scikit-uplift
-.\.venv\Scripts\python.exe scripts\validate_sklift.py
-
-# Run calibration and business analyses
-.\.venv\Scripts\python.exe scripts\analyze_uplift_calibration.py
-.\.venv\Scripts\python.exe scripts\analyze_cost_benefit.py --outcome-value 100 --treatment-cost 5
-
-# Design and dry-run the online experiment analyzer
-.\.venv\Scripts\python.exe scripts\design_online_experiment.py
-.\.venv\Scripts\python.exe scripts\simulate_online_experiment.py
-.\.venv\Scripts\python.exe scripts\analyze_online_experiment.py `
-  --input-path data/online_experiment_synthetic_results.csv `
-  --report-path reports/generated/online_experiment_dry_run.md
+.\.venv\Scripts\python.exe scripts\prepare_audit_sample.py
 ```
 
-Generated trial outputs are written to `reports/generated/`; reviewed results remain in the main `reports/` directory.
+### 3. Rebuild the evidence
 
-## Tests
+Visit audit:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_honest_criteo.py `
+  --sample-path data\processed\criteo_audit_1m.parquet `
+  --outcome visit --selection-folds 3 --random-state 777 `
+  --report-path reports\audit_visit_evaluation.md `
+  --validation-path reports\tables\audit_visit_selection.csv `
+  --test-path reports\tables\audit_visit_test.csv `
+  --contrast-path reports\tables\audit_visit_contrasts.csv `
+  --figure-path reports\figures\audit_visit_policy_value.png
+
+.\.venv\Scripts\python.exe scripts\run_honest_stability.py
+```
+
+Conversion development, audit, and calibration:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_honest_criteo.py `
+  --sample-path data\processed\criteo_sample_2m.parquet `
+  --outcome conversion --models response_model --selection-folds 3 `
+  --undersampling-factors 1,5,10,25,50,100,200 `
+  --report-path reports\rare_conversion_development.md `
+  --validation-path reports\tables\rare_conversion_selection.csv `
+  --test-path reports\tables\rare_conversion_internal_holdout.csv `
+  --contrast-path reports\tables\rare_conversion_internal_contrasts.csv `
+  --figure-path reports\figures\rare_conversion_development.png
+
+.\.venv\Scripts\python.exe scripts\run_honest_criteo.py `
+  --sample-path data\processed\criteo_audit_1m.parquet `
+  --outcome conversion --models response_model --selection-folds 3 `
+  --undersampling-factors 5 --undersampling-families t --random-state 777 `
+  --report-path reports\audit_conversion_evaluation.md `
+  --validation-path reports\tables\audit_conversion_selection.csv `
+  --test-path reports\tables\audit_conversion_test.csv `
+  --contrast-path reports\tables\audit_conversion_contrasts.csv `
+  --figure-path reports\figures\audit_conversion_policy_value.png
+
+.\.venv\Scripts\python.exe scripts\analyze_uplift_calibration.py
+```
+
+Ground-truth benchmark and online-test design:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_semisynthetic_benchmark.py
+.\.venv\Scripts\python.exe scripts\design_online_experiment.py
+```
+
+## Quality Gates
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests -q
+.\.venv\Scripts\ruff.exe check src scripts tests
 ```
 
-The suite covers data loading, uplift learners, ranking metrics, bootstrap, calibration, economic policies, and online-experiment analysis.
+## Interpretation Boundaries
 
-## Reports
-
-See [reports/README.md](reports/README.md) for the report index. The main documents are:
-
-- [Criteo EDA](reports/criteo_eda.md)
-- [Hillstrom warm-up](reports/hillstrom_warmup.md)
-- [Model evaluation](reports/model_evaluation.md)
-- [scikit-uplift validation](reports/scikit_uplift_validation.md)
-- [Uplift calibration](reports/uplift_calibration.md)
-- [Cost-benefit analysis](reports/cost_benefit_policy.md)
-- [Online-experiment design](reports/online_experiment_design.md)
-
-## Limitations
-
-- Results are offline estimates and require live randomized validation.
-- The Criteo feature names are anonymized, limiting business interpretation.
-- Calibration and monetary thresholds may change under population drift.
-- The value and cost assumptions are illustrative.
-- Strong ranking performance does not guarantee gains at every budget.
-
-## References
-
-1. Künzel, S. R., Sekhon, J. S., Bickel, P. J., & Yu, B. (2019). *Metalearners for Estimating Heterogeneous Treatment Effects Using Machine Learning*. [PNAS](https://doi.org/10.1073/pnas.1804597116), [arXiv](https://arxiv.org/abs/1706.03461).
-2. Gutierrez, P., & Gérardy, J.-Y. (2017). *Causal Inference and Uplift Modelling: A Review*. [PMLR](https://proceedings.mlr.press/v67/gutierrez17a.html).
-3. Diemert, E., Betlei, A., Renaudin, C., & Amini, M. R. (2018). *A Large Scale Benchmark for Uplift Modeling*. [AdKDD](https://www.adkdd.org/papers/a-large-scale-benchmark-for-uplift-modeling/2018).
-4. Diemert, E., Betlei, A., Renaudin, C., Amini, M. R., Gregoir, P., & Rahier, T. (2021). *A Large Scale Benchmark for Individual Treatment Effect Prediction and Uplift Modeling*. [arXiv](https://arxiv.org/abs/2111.10106), [code](https://github.com/criteo-research/large-scale-ITE-UM-benchmark).
-5. Betlei, A., Diemert, E., & Amini, M. R. (2021). *Uplift Modeling with Generalization Guarantees*. [DOI](https://doi.org/10.1145/3447548.3467395).
-6. Stochastic Solutions (2008). *Hillstrom Challenge: An Approach Using Uplift Modelling*. [PDF](https://www.stochasticsolutions.com/pdf/HillstromChallenge.pdf).
-7. [Criteo Uplift Prediction Dataset](https://ailab.criteo.com/criteo-uplift-prediction-dataset/).
-8. [scikit-uplift documentation](https://www.uplift-modeling.com/).
+- The audit sample is disjoint but comes from the same source population.
+- Confidence intervals condition on fitted policies.
+- Repeated splits overlap and are not independent replications.
+- Semi-synthetic findings depend on the chosen response surface.
+- Production impact and economics require a live randomized experiment.

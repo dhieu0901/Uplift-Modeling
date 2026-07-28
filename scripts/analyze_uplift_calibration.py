@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import argparse
@@ -34,18 +36,12 @@ from src.evaluation.policy_value import (
     uplift_score_threshold,
 )
 from src.evaluation.uplift import incremental_outcome, separate_relative_auuc
-from src.models.modified_outcome import ModifiedOutcomeModel
-from src.models.s_learner import SLearner
-from src.models.t_learner import TLearner
+from src.models.registry import (
+    default_model_factories,
+    rare_outcome_model_factories,
+)
 from src.models.uplift_calibration import UpliftIsotonicCalibrator
 from src.reporting import dataframe_to_markdown
-
-
-MODEL_FACTORIES = {
-    "transformed_outcome": ModifiedOutcomeModel,
-    "s_learner": SLearner,
-    "t_learner": TLearner,
-}
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,11 +49,26 @@ def parse_args() -> argparse.Namespace:
         description="Calibrate uplift scores on a calibration set and evaluate a holdout."
     )
     parser.add_argument(
-        "--sample-path", default="data/processed/criteo_sample_500k.parquet"
+        "--sample-path", default="data/processed/criteo_sample_2m.parquet"
     )
-    parser.add_argument("--outcome", default="visit", choices=["visit", "conversion"])
+    parser.add_argument(
+        "--outcome",
+        default="conversion",
+        choices=["visit", "conversion"],
+    )
     parser.add_argument("--max-rows", type=int, default=None)
-    parser.add_argument("--models", default="transformed_outcome,s_learner")
+    parser.add_argument("--models", default="undersampled_t_lr_k5")
+    parser.add_argument("--crossfit-folds", type=int, default=5)
+    parser.add_argument(
+        "--undersampling-factors",
+        default="5",
+        help="Optional rare-outcome logistic T/CVT factors.",
+    )
+    parser.add_argument(
+        "--undersampling-families",
+        default="t",
+        help="Comma-separated rare-outcome families: t,cvt.",
+    )
     parser.add_argument("--train-fraction", type=float, default=0.60)
     parser.add_argument("--calibration-fraction", type=float, default=0.20)
     parser.add_argument("--n-bins", type=int, default=10)
@@ -65,19 +76,33 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--random-state", type=int, default=42)
     parser.add_argument("--outcome-value", type=float, default=100.0)
     parser.add_argument("--treatment-cost", type=float, default=5.0)
-    parser.add_argument("--report-path", default="reports/uplift_calibration.md")
     parser.add_argument(
-        "--bins-path", default="reports/tables/uplift_calibration_bins.csv"
+        "--report-path",
+        default="reports/conversion_uplift_calibration.md",
     )
     parser.add_argument(
-        "--figure-path", default="reports/figures/uplift_calibration.png"
+        "--bins-path",
+        default="reports/tables/conversion_uplift_calibration_bins.csv",
+    )
+    parser.add_argument(
+        "--figure-path",
+        default="reports/figures/conversion_uplift_calibration.png",
     )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    model_names = parse_models(args.models)
+    factories = default_model_factories(crossfit_folds=args.crossfit_folds)
+    factors = parse_factors(args.undersampling_factors)
+    families = parse_rare_families(args.undersampling_families)
+    factories.update(
+        rare_outcome_model_factories(factors, families=families)
+    )
+    model_names = parse_models(
+        args.models,
+        supported=set(factories) - {"response_model"},
+    )
     dataset = load_criteo(ROOT / args.sample_path, outcome=args.outcome)
     dataset = subsample_criteo(dataset, args.max_rows, args.random_state)
     splits = split_train_calibration_test(
@@ -97,7 +122,7 @@ def main() -> None:
     fit_rows = []
     for model_name in model_names:
         print(f"Training {model_name}...")
-        model = MODEL_FACTORIES[model_name]()
+        model = factories[model_name]()
         started = perf_counter()
         model.fit(
             X_train,
@@ -204,14 +229,40 @@ def main() -> None:
     print(summary_table.to_string(index=False))
 
 
-def parse_models(value: str) -> list[str]:
+def parse_models(value: str, supported: set[str]) -> list[str]:
     models = [item.strip() for item in value.split(",") if item.strip()]
     if not models:
         raise ValueError("models must not be empty.")
-    unknown = sorted(set(models) - set(MODEL_FACTORIES))
+    unknown = sorted(set(models) - supported)
     if unknown:
         raise ValueError(f"Unsupported models: {unknown}")
     return list(dict.fromkeys(models))
+
+
+def parse_factors(value: str) -> tuple[float, ...]:
+    try:
+        return tuple(
+            float(item.strip()) for item in value.split(",") if item.strip()
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "undersampling-factors must be comma-separated numbers."
+        ) from exc
+
+
+def parse_rare_families(value: str) -> tuple[str, ...]:
+    families = tuple(
+        dict.fromkeys(item.strip() for item in value.split(",") if item.strip())
+    )
+    if not families:
+        raise ValueError("undersampling-families must not be empty.")
+    unknown = sorted(set(families) - {"t", "cvt"})
+    if unknown:
+        raise ValueError(
+            "undersampling-families supports only: t,cvt; "
+            f"received {unknown}"
+        )
+    return families
 
 
 def split_train_calibration_test(

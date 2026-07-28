@@ -2,7 +2,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.data.criteo import CRITEO_FEATURE_COLUMNS, feature_summary, load_criteo
+from src.data.criteo import (
+    CRITEO_FEATURE_COLUMNS,
+    load_criteo,
+    prepare_criteo_audit_sample,
+)
 
 
 def test_load_criteo_csv_selects_only_pretreatment_features(tmp_path: Path):
@@ -24,10 +28,38 @@ def test_load_criteo_csv_selects_only_pretreatment_features(tmp_path: Path):
     assert dataset.treatment.tolist() == [1, 0]
 
 
-def test_feature_summary_contains_missing_rate():
-    raw = pd.DataFrame({feature: [0.0, 1.0] for feature in CRITEO_FEATURE_COLUMNS})
+def test_prepare_audit_sample_excludes_prior_rows(tmp_path: Path):
+    rows = []
+    for index in range(100):
+        rows.append(
+            {
+                **{
+                    feature: float(index + feature_index / 100)
+                    for feature_index, feature in enumerate(
+                        CRITEO_FEATURE_COLUMNS
+                    )
+                },
+                "treatment": index % 2,
+                "conversion": int(index % 20 == 0),
+                "visit": int(index % 5 == 0),
+                "exposure": int(index % 3 == 0),
+            }
+        )
+    raw = pd.DataFrame(rows)
+    raw_path = tmp_path / "raw.csv.gz"
+    excluded_path = tmp_path / "excluded.parquet"
+    output_path = tmp_path / "audit.parquet"
+    raw.to_csv(raw_path, index=False, compression="gzip")
+    raw.iloc[:20].to_parquet(excluded_path, index=False)
 
-    summary = feature_summary(raw)
+    prepare_criteo_audit_sample(
+        raw_path,
+        [excluded_path],
+        output_path=output_path,
+        sample_size=40,
+        random_state=3,
+    )
+    audit = pd.read_parquet(output_path)
 
-    assert summary.shape[0] == len(CRITEO_FEATURE_COLUMNS)
-    assert (summary["missing_rate"] == 0.0).all()
+    assert len(audit) == 40
+    assert set(audit["f0"]).isdisjoint(set(raw.iloc[:20]["f0"]))
