@@ -329,6 +329,6 @@ technical context:
 - Doubly robust policy evaluation:
   [Dudík, Langford, and Li (2011)](https://arxiv.org/abs/1103.4601)
 - S-, T-, and X-learners:
-  [Künzel et al. (2019)](https://doi.org/10.1073/pnas.1804597116)
+  [Künzel et al. (2019)](https://arxiv.org/abs/1706.03461)
 - Rare-outcome uplift modeling:
   [Nyberg et al. (2021)](https://proceedings.mlr.press/v157/nyberg21a.html)

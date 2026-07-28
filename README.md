@@ -50,6 +50,21 @@ V(pi) - V(0) = E[pi(X) * (Y(1) - Y(0))]
 AUUC is a secondary ranking diagnostic. The operational decision uses the
 paired policy-value contrast at the fixed 5% budget.
 
+## Technical References
+
+These sources document the methods implemented in the project:
+
+- Criteo uplift dataset and benchmark:
+  [Diemert et al., *A Large Scale Benchmark for Individual Treatment Effect Prediction and Uplift Modeling*](https://arxiv.org/abs/2111.10106)
+- S-, T-, and X-learners:
+  [Künzel et al., *Meta-learners for Estimating Heterogeneous Treatment Effects using Machine Learning*](https://arxiv.org/abs/1706.03461)
+- Cross-fitting and double machine learning:
+  [Chernozhukov et al., *Double/debiased Machine Learning for Treatment and Structural Parameters*](https://academic.oup.com/ectj/article/21/1/C1/5056401)
+- Doubly robust policy evaluation:
+  [Dudík, Langford, and Li, *Doubly Robust Policy Evaluation and Learning*](https://arxiv.org/abs/1103.4601)
+- Rare-outcome uplift modeling:
+  [Nyberg et al., *Uplift Modeling with High Class Imbalance*](https://proceedings.mlr.press/v157/nyberg21a.html)
+
 ## Repository
 
 ```text
