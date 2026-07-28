@@ -1,6 +1,6 @@
 # Honest Uplift Modeling for Campaign Optimization
 
-A reproducible study of whether uplift ranking creates more incremental
+A reproducible project testing whether uplift ranking creates more incremental
 outcomes than response targeting at a fixed campaign budget.
 
 > **Decision:** test the S-learner as an online challenger for visits. Keep
@@ -25,11 +25,11 @@ confirmatory.
 For conversion, the selected undersampled T-learner was worse than response
 targeting by 47.1 conversions at 5% and significantly worse at 10% through 30%.
 
-Read the [research paper](reports/uplift_research_paper.md), the
-[pre-specified protocol](reports/methodology_protocol.md), and the
+Read the [project report](reports/project_report.md), the
+[locked evaluation protocol](reports/evaluation_protocol.md), and the
 [evidence index](reports/README.md).
 
-## Research Design
+## Project Design
 
 - Joint treatment/outcome-stratified development and locked-test partitions.
 - Three-fold out-of-fold model and policy selection.
@@ -54,7 +54,7 @@ paired policy-value contrast at the fixed 5% budget.
 
 ```text
 .
-|-- reports/      # Paper, protocol, evidence appendices, tables, and figures
+|-- reports/      # Project report, protocol, evidence, tables, and figures
 |-- scripts/      # Reproducible command-line workflows
 |-- src/          # Data, models, evaluation, and experiment code
 `-- tests/        # Unit and integration tests

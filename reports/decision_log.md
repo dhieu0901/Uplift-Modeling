@@ -1,4 +1,4 @@
-# Research Claim Ledger
+# Decision and Evidence Log
 
 This ledger separates observed estimates from decisions and prevents
 exploratory results from being promoted to confirmatory claims.

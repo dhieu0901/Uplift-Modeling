@@ -1,6 +1,6 @@
-# Pre-Specified Honest Uplift Evaluation Protocol
+# Locked Uplift Evaluation Protocol
 
-## Research Question
+## Project Question
 
 At a fixed campaign budget, does an uplift ranking produce more incremental
 outcomes than the operational response ranking on users not used for model or

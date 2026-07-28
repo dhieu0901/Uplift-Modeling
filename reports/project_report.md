@@ -1,13 +1,13 @@
-# Honest Uplift Modeling Under Treatment and Outcome Imbalance
+# Campaign Uplift Modeling: Project Report
 
 > **Evidence status:** the locked audit supports an online visit challenger,
 > not production rollout. Response targeting remains the conversion policy.
 
-## Abstract
+## Project Summary
 
 Uplift models rank users by the outcome change caused by treatment rather than
 by outcome probability alone. That distinction is useful only if model
-selection and evaluation remain separated. This study compares response
+selection and evaluation remain separated. This project compares response
 targeting with S-, T-, X-, CVT-, modified-outcome, R-, and doubly robust
 learners on the Criteo Uplift Prediction Dataset. The evaluation protocol uses
 joint treatment/outcome stratification, out-of-fold development predictions,
@@ -31,7 +31,7 @@ noisy enough to mis-rank candidates. The combined evidence illustrates why
 uplift work requires honest selection, budget-specific uncertainty, and live
 randomized validation.
 
-## 1. Research Question
+## Project Objective
 
 For users eligible for a campaign, does an uplift ranking create more
 incremental outcomes than an operational response ranking when both target the
@@ -47,9 +47,10 @@ Delta = [V(pi_uplift) - V(0)] - [V(pi_response) - V(0)]
 
 where `pi(X)` is a deterministic top-k targeting rule.
 
-## 2. Contributions
+## What Was Built
 
-This project adds six safeguards beyond a conventional uplift benchmark:
+The implementation adds six safeguards beyond a conventional uplift
+benchmark:
 
 1. **Honest model selection.** Candidate policies are selected from
    out-of-fold development predictions, not test outcomes.
@@ -66,7 +67,7 @@ This project adds six safeguards beyond a conventional uplift benchmark:
 6. **Ground-truth stress testing.** A semi-synthetic benchmark on real Criteo
    covariates reports CATE error, exact policy value, and oracle regret.
 
-## 3. Data
+## Data
 
 The Criteo Uplift Prediction Dataset v2.1 contains 13,979,592 randomized
 observations, 12 anonymized pre-treatment features, an approximately 85%
@@ -82,9 +83,9 @@ post-treatment `exposure` variable is excluded.
 The audit sample has treatment, visit, and conversion rates of 84.59%, 4.89%,
 and 0.31%, respectively.
 
-## 4. Honest Evaluation Protocol
+## Evaluation Design
 
-### 4.1 Outer split and model selection
+### Development selection and locked test
 
 The canonical experiment reserves 20% as a locked test. The remaining 80% is
 the development partition. Three joint treatment/outcome-stratified folds
@@ -97,7 +98,7 @@ paired 95% AIPW confidence interval against response targeting. The champion
 and response model are then refitted on all development data before the test
 outcomes are opened.
 
-### 4.2 AIPW policy value
+### AIPW policy value
 
 Let `e` be the randomized treatment propensity and let `mu_t(X)` estimate the
 outcome under treatment state `t`. The AIPW treatment-effect score is:
@@ -119,7 +120,7 @@ paired uplift-versus-response contrast uses:
 This pairing measures the actual disagreement between the two policies and is
 more precise than subtracting two independent estimates.
 
-### 4.3 Candidate learners
+### Candidate learners
 
 | Model | Role |
 |---|---|
@@ -135,16 +136,16 @@ more precise than subtracting two independent estimates.
 AUUC is reported as a full-ranking diagnostic. It is not the selection
 criterion because the campaign decision is budget-specific.
 
-## 5. Visit Results
+## Visit Result
 
-### 5.1 Development selection on the audit sample
+### Development selection
 
 On 800,000 audit development observations, the S-learner had the strongest
 lower confidence bound at 5%. Its estimated advantage over response targeting
 was 1,001.1 visits with a 95% interval of [565.3, 1,436.9]. This result selected
 the policy; it is not the confirmatory effect estimate.
 
-### 5.2 Locked audit test
+### Locked audit test
 
 | Budget | S-learner incremental visits | Response incremental visits | Paired difference | 95% CI |
 |---:|---:|---:|---:|---:|
@@ -160,7 +161,7 @@ global ranking metric need not agree.
 
 ![Locked-test visit policy value](figures/audit_visit_policy_value.png)
 
-### 5.3 Repeated-split sensitivity
+### Repeated-split sensitivity
 
 Ten complete train/validation/test repetitions on the 500,000-row development
 sample retrained and re-evaluated the already locked S-learner against response
@@ -181,9 +182,9 @@ The direction is reasonably stable, but interval evidence is weak. These
 overlapping splits are correlated sensitivity analyses, not ten independent
 experiments.
 
-## 6. Rare Conversion Outcome
+## Conversion Result
 
-### 6.1 Imbalance protocol
+### Imbalance handling
 
 For factors `1, 5, 10, 25, 50, 100, 200`, negative outcomes are sampled
 separately within treatment and control while all positives are retained. The
@@ -195,7 +196,7 @@ chose `undersampled_t_lr_k5`. Its development advantage was still negative:
 -35.7 conversions, with a 95% interval of [-131.8, 60.3]. The internal holdout
 was essentially tied at 5%: -2.5 conversions, [-55.3, 50.3].
 
-### 6.2 Audit conversion result
+### Locked audit test
 
 | Budget | T-learner k=5 minus response | 95% CI |
 |---:|---:|---:|
@@ -214,7 +215,7 @@ Independent isotonic calibration reduced expected uplift calibration error
 from `0.000629` to `0.000298` and moved calibration slope from `1.576` to
 `1.024`. This is a magnitude improvement, not evidence of better ranking.
 
-## 7. Semi-Synthetic Ground-Truth Benchmark
+## Ground-Truth Check
 
 Real Criteo covariates are combined with nonlinear response surfaces,
 interactions, and both positive and negative treatment-effect heterogeneity.
@@ -241,7 +242,7 @@ wrong model even when the estimator is unbiased asymptotically. Larger samples,
 cross-fitting, conservative selection, and an untouched audit are therefore
 substantive requirements rather than presentation details.
 
-## 8. Reinterpretation of the Exploratory Result
+## What Changed from the First Iteration
 
 The earlier workflow reported a 66.3% visit improvement for the
 modified-outcome model at 5%. Candidate selection and effect reporting reused
@@ -256,7 +257,7 @@ The confirmatory headline is:
 
 This conclusion is less dramatic and more decision-useful.
 
-## 9. Online Validation Design
+## Online Validation Plan
 
 The proposed randomized test assigns eligible users to complete policy arms
 before ranking. Arm A uses the S-learner, arm B uses response targeting, and arm
@@ -278,7 +279,7 @@ The primary estimand is the A-B visit-rate difference. Conversion, opt-out,
 complaints, contact frequency, and net value are guardrails. No early stopping
 based on unadjusted p-values is permitted.
 
-## 10. Decision
+## Current Decision
 
 - **Visit:** advance the locked S-learner to a powered randomized challenger
   test; do not roll it out based on offline evidence alone.
@@ -289,7 +290,7 @@ based on unadjusted p-values is permitted.
 - **Monitoring:** re-check overlap, treatment propensity, calibration, score
   drift, policy overlap, and guardrails before launch.
 
-## 11. Limitations
+## Limitations
 
 - The Criteo features are anonymized, limiting mechanism interpretation.
 - AIPW intervals condition on fitted policies and do not fully integrate model
@@ -301,12 +302,12 @@ based on unadjusted p-values is permitted.
 - Offline randomized data evaluates policy value under the benchmark treatment;
   production delivery, interference, and logging can differ.
 
-## 12. Reproducibility
+## Project Artifacts
 
 Primary artifacts:
 
-- [Methodology protocol](methodology_protocol.md)
-- [Claim ledger](claim_ledger.md)
+- [Evaluation protocol](evaluation_protocol.md)
+- [Decision log](decision_log.md)
 - [Audit construction](audit_sample.md)
 - [Visit audit](audit_visit_evaluation.md)
 - [Visit stability](visit_stability.md)
@@ -316,15 +317,18 @@ Primary artifacts:
 - [Semi-synthetic benchmark](semisynthetic_benchmark.md)
 - [Online experiment design](online_experiment_design.md)
 
-## References
+## Technical Foundations
 
-1. Chernozhukov, V. et al. (2018).
-   [Double/debiased machine learning for treatment and structural parameters](https://academic.oup.com/ectj/article/21/1/C1/5056401).
-2. Diemert, E. et al. (2021).
-   [A large scale benchmark for individual treatment effect prediction and uplift modeling](https://arxiv.org/abs/2111.10106).
-3. Dudik, M., Langford, J., and Li, L. (2011).
-   [Doubly robust policy evaluation and learning](https://arxiv.org/abs/1103.4601).
-4. Künzel, S. R. et al. (2019).
-   [Metalearners for estimating heterogeneous treatment effects using machine learning](https://doi.org/10.1073/pnas.1804597116).
-5. Nyberg, O. et al. (2021).
-   [Uplift modeling with high class imbalance](https://proceedings.mlr.press/v157/nyberg21a.html).
+The implementation uses established methods. Source links are provided for
+technical context:
+
+- Cross-fitting and double machine learning:
+  [Chernozhukov et al. (2018)](https://academic.oup.com/ectj/article/21/1/C1/5056401)
+- Criteo uplift dataset and benchmark:
+  [Diemert et al. (2021)](https://arxiv.org/abs/2111.10106)
+- Doubly robust policy evaluation:
+  [Dudík, Langford, and Li (2011)](https://arxiv.org/abs/1103.4601)
+- S-, T-, and X-learners:
+  [Künzel et al. (2019)](https://doi.org/10.1073/pnas.1804597116)
+- Rare-outcome uplift modeling:
+  [Nyberg et al. (2021)](https://proceedings.mlr.press/v157/nyberg21a.html)
