@@ -1,76 +1,121 @@
 # Honest Uplift Modeling for Campaign Optimization
 
-A reproducible project testing whether uplift ranking creates more incremental
-outcomes than response targeting at a fixed campaign budget.
+A reproducible decision project that tests whether a campaign should target
+users by predicted response or by predicted incremental effect.
 
-> **Decision:** test the S-learner as an online challenger for visits. Keep
-> response targeting for conversion. The offline evidence does not support a
-> production rollout or an ROI claim.
+## The Original Problem
 
-## Primary Result
+A campaign team has a limited contact budget and can target only 5% of eligible
+users. The existing approach ranks users by their predicted probability of
+visiting or converting after receiving the campaign:
 
-The model-selection protocol used three-fold out-of-fold development
-predictions and a disjoint one-million-row audit sample. At the pre-specified
-5% visit budget, the locked 200,000-row test produced:
+```text
+response_score(X) = P(Y = 1 | X, treatment = 1)
+```
 
-| Policy contrast | Incremental visits | 95% CI |
-|---|---:|---:|
-| S-learner minus response targeting | +168.5 | [-53.0, 390.0] |
+This score finds users who are likely to respond, but it does not establish
+that the campaign caused the response. A high-ranked user may have visited
+without any campaign. Spending budget on that user produces little incremental
+value even when the response prediction is accurate.
 
-The point estimate favors the S-learner, but the interval includes zero. Across
-ten repeated honest splits, 9/10 point estimates were positive and only 1/10
-confidence intervals was wholly positive. The result is promising, not
-confirmatory.
+The decision should instead prioritize users whose outcome probability changes
+because of treatment:
 
-For conversion, the selected undersampled T-learner was worse than response
-targeting by 47.1 conversions at 5% and significantly worse at 10% through 30%.
+```text
+uplift(X) =
+    P(Y = 1 | X, treatment = 1)
+    - P(Y = 1 | X, treatment = 0)
+```
 
-Read the [project report](reports/project_report.md), the
-[locked evaluation protocol](reports/evaluation_protocol.md), and the
-[evidence index](reports/README.md).
+The project therefore asks:
 
-## Project Design
+> At the same 5% campaign budget, does uplift targeting create more
+> incremental outcomes than response targeting?
 
-- Joint treatment/outcome-stratified development and locked-test partitions.
-- Three-fold out-of-fold model and policy selection.
-- Paired augmented inverse-propensity weighted policy contrasts.
-- A disjoint audit sample with zero row overlap with development samples.
-- S-, T-, X-, CVT-, modified-outcome, R-, and doubly robust learners.
-- Treatment-arm-specific undersampling and probability correction for rare
-  conversion.
-- A semi-synthetic benchmark with known CATE, PEHE, exact policy value, and
-  oracle regret.
+## Why This Is Difficult
 
-The primary estimand for targeting policy `pi(X)` is:
+The individual treatment effect is never directly observed: each user is
+either treated or untreated, so the counterfactual outcome is missing.
+Additional practical risks make a simple train/test benchmark unreliable:
+
+- selecting a model and reporting its effect on the same holdout exaggerates
+  performance;
+- conversion is rare, making treatment-effect estimates unstable;
+- a model can rank well globally but perform poorly within the operational top
+  5%;
+- subtracting two separately estimated policy values wastes the pairing
+  information from users on whom the policies disagree;
+- offline evidence from historical experiments does not prove future
+  production impact.
+
+## What the Project Builds
+
+The repository implements an end-to-end comparison between the operational
+response ranking and multiple uplift learners. The workflow:
+
+1. loads randomized Criteo campaign data and removes the post-treatment
+   `exposure` variable;
+2. separates development data from a disjoint one-million-row audit sample;
+3. produces out-of-fold predictions for model and policy selection;
+4. evaluates fixed-budget policies with paired doubly robust contrasts;
+5. stress-tests the result across repeated honest splits;
+6. handles rare conversion with treatment-arm-specific undersampling and
+   probability correction;
+7. checks CATE recovery on a semi-synthetic benchmark with known ground truth;
+8. converts the offline result into a powered online challenger-test design.
+
+The candidate set contains response targeting plus S-, T-, X-, CVT-,
+modified-outcome, R-, and doubly robust learners. These models are comparison
+tools inside the project; the objective is a defensible campaign decision, not
+to reproduce or extend a research paper.
+
+## Decision Metric
+
+For targeting policy `pi(X)`, the project estimates incremental value relative
+to treating nobody:
 
 ```text
 V(pi) - V(0) = E[pi(X) * (Y(1) - Y(0))]
 ```
 
-AUUC is a secondary ranking diagnostic. The operational decision uses the
-paired policy-value contrast at the fixed 5% budget.
+AUUC remains a secondary ranking diagnostic. The primary decision compares the
+uplift and response policies on the same users at the pre-specified 5% budget.
 
-## Implementation-to-Source Map
+## Results and Decision
 
-Each source below was checked against the implementation. The scope column
-states exactly what is reused; it does not imply that this project reproduces
-the source's experiments or results.
+The visit workflow selected the S-learner using three-fold out-of-fold
+development predictions. On the locked 200,000-row audit test:
 
-| Project component | Source | Verified use |
-|---|---|---|
-| Criteo data and benchmark metric | [Diemert et al., *A Large Scale Benchmark for Individual Treatment Effect Prediction and Uplift Modeling*](https://arxiv.org/abs/2111.10106) | Dataset schema, randomized benchmark setting, and the separate relative AUUC convention used in `src/data/criteo.py` and `src/evaluation/uplift.py`. |
-| S-, T-, and X-learners | [Künzel et al., *Metalearners for Estimating Heterogeneous Treatment Effects using Machine Learning*](https://arxiv.org/abs/1706.03461) | Direct match for the one-model S-learner, arm-specific T-learner, and the X-learner's imputation, second-stage effect models, and propensity-weighted combination. |
-| Class-variable transformation | [Jaśkowski and Jaroszewicz, *Uplift Modeling for Clinical Trial Data*](https://people.cs.pitt.edu/~milos/icml_clinicaldata_2012/Papers/Oral_Jaroszewitz_ICML_Clinical_2012.pdf) | Direct match for `Z = 1(Y = T)`, `uplift = 2P(Z=1\|X)-1`, and treatment-arm reweighting when assignment is unbalanced. |
-| Modified outcome | [Athey and Imbens, *Recursive Partitioning for Heterogeneous Causal Effects*](https://pmc.ncbi.nlm.nih.gov/articles/PMC4941430/) | Direct match for the transformed target `Y(T-e) / [e(1-e)]` used by `ModifiedOutcomeModel` and the calibration pseudo-outcome. |
-| R-learner | [Nie and Wager, *Quasi-Oracle Estimation of Heterogeneous Treatment Effects*](https://arxiv.org/abs/1712.04912) | Direct match for cross-fitted nuisance estimates and R-loss minimization, implemented as weighted regression of `(Y-m(X))/(T-e)` with weights `(T-e)^2`. |
-| DR-learner | [Kennedy, *Towards Optimal Doubly Robust Estimation of Heterogeneous Causal Effects*](https://arxiv.org/abs/2004.14497) | Direct match for the cross-fitted doubly robust pseudo-outcome and second-stage CATE regression. |
-| Cross-fitting safeguard | [Chernozhukov et al., *Double/debiased Machine Learning for Treatment and Structural Parameters*](https://academic.oup.com/ectj/article/21/1/C1/5056401) | Source for the sample-splitting and out-of-fold nuisance-prediction pattern. The repository does not claim to implement the paper's complete DML estimator. |
-| Fixed-policy evaluation | [Dudík, Langford, and Li, *Doubly Robust Policy Evaluation and Learning*](https://arxiv.org/abs/1103.4601) | The AIPW value in `src/evaluation/policy_value.py` is the binary-action, no-treatment-reference specialization of doubly robust policy value. |
-| Rare-outcome handling | [Nyberg, Kuśmierczyk, and Klami, *Uplift Modeling with High Class Imbalance*](https://proceedings.mlr.press/v157/nyberg21a.html) | Direct match for treatment-stratified negative undersampling, the low-rate CVT factor correction, and transformed-outcome isotonic calibration. The T-learner's exact case-control probability inversion is an implementation-specific correction, not attributed to this paper. |
+| Policy contrast at 5% | Estimated difference | 95% CI | Decision |
+|---|---:|---:|---|
+| S-learner minus response targeting | +168.5 visits | [-53.0, 390.0] | Online challenger test |
+| Undersampled T-learner minus response targeting | -47.1 conversions | [-104.6, 10.3] | Keep response targeting |
 
-The disjoint audit construction, 5% selection rule, paired decision criterion,
-semi-synthetic response surface, online-test design, and project conclusions
-are project-specific choices rather than results taken from these sources.
+The visit estimate is directionally promising, but its interval includes zero.
+Across ten repeated honest splits, 9/10 point estimates were positive and only
+1/10 intervals were wholly positive. This is enough to justify a controlled
+online challenger, not a production rollout or ROI claim.
+
+For conversion, the uplift candidate was also significantly worse at budgets
+from 10% through 30%. Response targeting therefore remains the current
+conversion policy.
+
+Read the [project report](reports/project_report.md), the
+[locked evaluation protocol](reports/evaluation_protocol.md), and the
+[evidence index](reports/README.md).
+
+## Selected References
+
+The project keeps three references that directly anchor its data, core model
+family, and rare-outcome intervention:
+
+1. [Diemert et al., *A Large Scale Benchmark for Individual Treatment Effect Prediction and Uplift Modeling*](https://arxiv.org/abs/2111.10106) — source of the randomized Criteo dataset and benchmark setting.
+2. [Künzel et al., *Metalearners for Estimating Heterogeneous Treatment Effects using Machine Learning*](https://arxiv.org/abs/1706.03461) — basis for the S-, T-, and X-learner family used in the comparison.
+3. [Nyberg, Kuśmierczyk, and Klami, *Uplift Modeling with High Class Imbalance*](https://proceedings.mlr.press/v157/nyberg21a.html) — basis for treatment-stratified negative undersampling and rare-outcome calibration.
+
+These are implementation anchors, not an exhaustive literature review. The
+audit construction, 5% decision rule, paired evaluation, semi-synthetic design,
+online-test plan, and conclusions are project-specific.
 
 ## Repository
 
