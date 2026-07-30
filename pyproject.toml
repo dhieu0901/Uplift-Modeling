@@ -46,6 +46,10 @@ extraPaths = ["."]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Tests import the project as `src.*` from the repository root. `python -m pytest`
+# puts the working directory on sys.path but the bare `pytest` entry point does
+# not, so without this the suite passes locally and fails in CI.
+pythonpath = ["."]
 # Test caching is disabled because it writes into the repository root, which is
 # not always writable on the machines this project runs on.
 addopts = "-q -p no:cacheprovider"
