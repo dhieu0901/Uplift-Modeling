@@ -263,40 +263,6 @@ def monetize_policy_table(
     return result
 
 
-def select_best_campaign(
-    policy_table: pd.DataFrame,
-    allow_no_campaign: bool = True,
-) -> pd.Series:
-    """Select the policy/budget pair with the highest net value."""
-    if "net_value" not in policy_table:
-        raise ValueError("Policy table must contain a net_value column.")
-    if policy_table.empty:
-        raise ValueError("Policy table must not be empty.")
-
-    valid = policy_table[np.isfinite(policy_table["net_value"])].copy()
-    if valid.empty:
-        raise ValueError("Policy table has no finite net_value values.")
-    best = valid.loc[valid["net_value"].idxmax()].copy()
-    if not allow_no_campaign or float(best["net_value"]) > 0:
-        return best
-
-    no_campaign = dict.fromkeys(policy_table.columns, np.nan)
-    no_campaign.update(
-        {
-            "policy": "no_campaign",
-            "budget_pct": 0.0,
-            "n_targeted": 0,
-            "incremental_outcome": 0.0,
-            "gross_value": 0.0,
-            "campaign_cost": 0.0,
-            "net_value": 0.0,
-            "net_value_per_1k_targeted": 0.0,
-            "profitable": False,
-        }
-    )
-    return pd.Series(no_campaign)
-
-
 def _validate_unit_economics(
     outcome_value: float,
     treatment_cost: float,

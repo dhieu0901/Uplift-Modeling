@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 
 import numpy as np
-import numpy.typing as npt
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
@@ -31,45 +30,6 @@ def incremental_outcome(
 
     uplift_rate = y_arr[treated_mask].mean() - y_arr[control_mask].mean()
     return float(uplift_rate * len(y_arr))
-
-
-def cumulative_uplift_curve(
-    y: Sequence[float],
-    treatment: Sequence[int],
-    score: Sequence[float],
-    min_fraction: float = 0.01,
-    n_points: int = 100,
-) -> pd.DataFrame:
-    """Build a cumulative uplift curve by sorting users by descending score."""
-    y_arr = np.asarray(y, dtype=float)
-    w_arr = np.asarray(treatment, dtype=int)
-    s_arr = np.asarray(score, dtype=float)
-    if not (len(y_arr) == len(w_arr) == len(s_arr)):
-        raise ValueError("y, treatment, and score must have equal length.")
-
-    order = np.argsort(-s_arr)
-    y_sorted = y_arr[order]
-    w_sorted = w_arr[order]
-
-    fractions = np.linspace(min_fraction, 1.0, n_points)
-    rows = [
-        {
-            "fraction": 0.0,
-            "n_targeted": 0,
-            "incremental_outcome": 0.0,
-        }
-    ]
-    n = len(y_sorted)
-    for fraction in fractions:
-        k = max(1, int(round(fraction * n)))
-        rows.append(
-            {
-                "fraction": fraction,
-                "n_targeted": k,
-                "incremental_outcome": incremental_outcome(y_sorted[:k], w_sorted[:k]),
-            }
-        )
-    return pd.DataFrame(rows)
 
 
 def exact_uplift_curve(
@@ -163,17 +123,6 @@ def exact_qini_curve(
     )
 
 
-def auuc(curve: pd.DataFrame) -> float:
-    """Area under a cumulative uplift curve."""
-    clean = curve.dropna(subset=["incremental_outcome"])
-    if clean.empty:
-        return float("nan")
-    if hasattr(np, "trapezoid"):
-        return float(np.trapezoid(clean["incremental_outcome"], clean["fraction"]))
-    # NumPy < 2.0 fallback; the modern name is used above when available.
-    return float(np.trapz(clean["incremental_outcome"], clean["fraction"]))  # noqa: NPY201
-
-
 def qini_coefficient(curve: pd.DataFrame) -> float:
     """Calculate the area between the uplift curve and a random-targeting policy.
 
@@ -235,79 +184,6 @@ def separate_relative_auuc(
         + 0.5 * mean_treated**2
         - 0.5 * mean_control**2
     )
-
-
-def budget_policy_table(
-    y: Sequence[float],
-    treatment: Sequence[int],
-    scores: Mapping[str, npt.ArrayLike],
-    fractions: Sequence[float] = (0.05, 0.10, 0.20, 0.30),
-) -> pd.DataFrame:
-    """Compare targeting policies at fixed budget fractions."""
-    rows = []
-    y_arr = np.asarray(y, dtype=float)
-    w_arr = np.asarray(treatment, dtype=int)
-    n = len(y_arr)
-
-    for policy, score in scores.items():
-        s_arr = np.asarray(score, dtype=float)
-        if len(s_arr) != n:
-            raise ValueError(f"Score for policy {policy} has an incorrect length.")
-        order = np.argsort(-s_arr)
-        for fraction in fractions:
-            k = max(1, int(round(fraction * n)))
-            selected = order[:k]
-            inc = incremental_outcome(y_arr[selected], w_arr[selected])
-            rows.append(
-                {
-                    "policy": policy,
-                    "budget_pct": round(100 * fraction, 1),
-                    "n_targeted": k,
-                    "treated_n": int((w_arr[selected] == 1).sum()),
-                    "control_n": int((w_arr[selected] == 0).sum()),
-                    "incremental_outcome": inc,
-                    "incremental_outcome_per_1k": inc / k * 1000
-                    if np.isfinite(inc)
-                    else float("nan"),
-                }
-            )
-    return pd.DataFrame(rows)
-
-
-def uplift_by_quantile(
-    y: Sequence[float],
-    treatment: Sequence[int],
-    score: Sequence[float],
-    n_bins: int = 10,
-) -> pd.DataFrame:
-    """Estimate uplift rate and incremental outcome in score quantiles."""
-    df = pd.DataFrame({"y": y, "treatment": treatment, "score": score})
-    df = df.sort_values("score", ascending=False).reset_index(drop=True)
-    df["bin"] = pd.qcut(df.index + 1, q=n_bins, labels=False)
-
-    rows = []
-    for bin_id, group in df.groupby("bin", observed=True):
-        treated = group[group["treatment"] == 1]
-        control = group[group["treatment"] == 0]
-        if treated.empty or control.empty:
-            uplift_rate = float("nan")
-            inc = float("nan")
-        else:
-            uplift_rate = treated["y"].mean() - control["y"].mean()
-            inc = uplift_rate * len(group)
-        rows.append(
-            {
-                "bin": int(bin_id) + 1,
-                "n": len(group),
-                "treated_n": len(treated),
-                "control_n": len(control),
-                "treated_outcome_rate": treated["y"].mean() if not treated.empty else float("nan"),
-                "control_outcome_rate": control["y"].mean() if not control.empty else float("nan"),
-                "uplift_rate": uplift_rate,
-                "incremental_outcome": inc,
-            }
-        )
-    return pd.DataFrame(rows)
 
 
 def _validate_binary_curve_inputs(

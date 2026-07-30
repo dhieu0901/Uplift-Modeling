@@ -3,7 +3,6 @@ import pandas as pd
 import pytest
 
 from src.evaluation.uplift import (
-    budget_policy_table,
     exact_qini_curve,
     exact_uplift_curve,
     incremental_outcome,
@@ -17,21 +16,6 @@ def test_incremental_outcome_uses_treated_control_difference():
     treatment = np.array([1, 1, 0, 0])
 
     assert incremental_outcome(y, treatment) == 4.0
-
-
-def test_budget_policy_table_returns_one_row_per_policy_and_budget():
-    y = np.array([1, 0, 1, 0, 1, 0])
-    treatment = np.array([1, 0, 1, 0, 1, 0])
-    scores = {
-        "model_a": np.array([0.9, 0.8, 0.7, 0.1, 0.2, 0.3]),
-        "model_b": np.array([0.1, 0.2, 0.3, 0.7, 0.8, 0.9]),
-    }
-
-    result = budget_policy_table(y, treatment, scores, fractions=(0.5,))
-
-    assert set(result["policy"]) == {"model_a", "model_b"}
-    assert result.shape[0] == 2
-    assert set(result["budget_pct"]) == {50.0}
 
 
 def test_qini_coefficient_is_zero_for_random_baseline_line():

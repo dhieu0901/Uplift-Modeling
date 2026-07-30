@@ -6,7 +6,6 @@ from src.evaluation.policy_value import (
     aipw_policy_value_table,
     doubly_robust_treatment_effect_scores,
     monetize_policy_table,
-    select_best_campaign,
     target_by_expected_value,
     uplift_score_threshold,
 )
@@ -45,35 +44,6 @@ def test_monetize_policy_table_calculates_break_even_and_net_value():
     assert result["break_even_cost_per_target"] == 1.0
     assert result["minimum_value_to_cost_ratio"] == 5.0
     assert bool(result["profitable"])
-
-
-def test_select_best_campaign_includes_no_campaign_option():
-    policies = pd.DataFrame(
-        [
-            {"policy": "a", "budget_pct": 5.0, "net_value": -10.0},
-            {"policy": "b", "budget_pct": 10.0, "net_value": -2.0},
-        ]
-    )
-
-    best = select_best_campaign(policies)
-
-    assert best["policy"] == "no_campaign"
-    assert best["budget_pct"] == 0.0
-    assert best["net_value"] == 0.0
-
-
-def test_select_best_campaign_returns_highest_positive_value():
-    policies = pd.DataFrame(
-        [
-            {"policy": "a", "budget_pct": 5.0, "net_value": 10.0},
-            {"policy": "b", "budget_pct": 10.0, "net_value": 20.0},
-        ]
-    )
-
-    best = select_best_campaign(policies)
-
-    assert best["policy"] == "b"
-    assert best["budget_pct"] == 10.0
 
 
 def test_aipw_scores_equal_known_effect_with_perfect_nuisance_models():

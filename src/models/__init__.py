@@ -1,6 +1,6 @@
-"""Model wrappers for response and uplift learners."""
+"""Model wrappers for response and uplift learners.
 
-from src.models.dr_learner import DRLearner
-from src.models.r_learner import RLearner
-
-__all__ = ["DRLearner", "RLearner"]
+Import learners from their own modules; nothing is re-exported here so that
+the registry in ``src.models.registry`` stays the single place that decides
+which learners take part in an experiment.
+"""

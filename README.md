@@ -340,7 +340,8 @@ methodology and engineering, not from a new model:
 | `outputs/` now tracked in git | Every published number points at a file instead of asking for trust |
 | Removed a fake correction in `UndersampledCVTLearner` | It divided by the undersampling factor, which changes no ranking and implied a calibration that never happened |
 | Stricter ruff rule set, pinned lockfile, CI | Quality gates run on every push instead of by hand |
-| Tests: 34 to 48 | Reporting, reference policies, seed stability, overlap detection, and locked evaluation were untested |
+| Tests: 34 to 45 | Added 14 covering reporting, reference policies, seed stability, overlap detection, and locked evaluation; dropped 3 along with the dead code they exercised |
+| Deleted unused code | `auuc`, `cumulative_uplift_curve`, `uplift_by_quantile`, `budget_policy_table`, and `select_best_campaign` were superseded by the AIPW path and called by nothing in the pipeline |
 
 The earlier claim of a 66.3% visit improvement remains retracted: it reused test
 evidence for both selection and reporting. It is kept in this history as a record
@@ -353,8 +354,10 @@ of the mistake, not as a result.
 |-- .github/workflows/ci.yml     # ruff + pytest on Python 3.11 and 3.12
 |-- README.md
 |-- pyproject.toml               # ruff, pytest, and type-checker configuration
-|-- requirements.txt             # minimum supported versions
-|-- requirements.lock.txt        # exact versions behind the published numbers
+|-- requirements.txt             # minimum versions; CI installs this so that a
+|                                # version drift breaks the build early
+|-- requirements.lock.txt        # exact versions behind the published numbers;
+|                                # install this to reproduce them digit for digit
 |-- docs/determinism.md          # measured reproducibility guarantees
 |-- data/                        # git-ignored; rebuilt by scripts
 |-- outputs/                     # tracked evidence: reports, tables, figures
@@ -375,7 +378,7 @@ of the mistake, not as a result.
 |   |                            # calibration, ground truth, experiment design
 |   |-- experiments/             # honest splitting and the locked protocol
 |   `-- reporting.py             # markdown tables and policy-value plots
-`-- tests/                       # 48 tests, no data download required
+`-- tests/                       # 45 tests, no data download required
 ```
 
 ## Reproduction
