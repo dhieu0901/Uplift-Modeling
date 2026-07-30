@@ -3,13 +3,14 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from scipy.stats import spearmanr
 
 
 def ground_truth_cate_metrics(
     true_cate: Sequence[float],
-    scores: Mapping[str, Sequence[float]],
+    scores: Mapping[str, npt.ArrayLike],
 ) -> pd.DataFrame:
     """Evaluate CATE estimates when semi-synthetic ground truth is known."""
     truth = np.asarray(true_cate, dtype=float)
@@ -32,7 +33,7 @@ def ground_truth_cate_metrics(
 
 def ground_truth_policy_table(
     true_cate: Sequence[float],
-    scores: Mapping[str, Sequence[float]],
+    scores: Mapping[str, npt.ArrayLike],
     fractions: Sequence[float] = (0.05, 0.10, 0.20, 0.30),
 ) -> pd.DataFrame:
     """Calculate exact policy gain and regret from known CATEs."""
@@ -70,7 +71,7 @@ def ground_truth_policy_table(
 
 def _validate_scores(
     truth: np.ndarray,
-    scores: Mapping[str, Sequence[float]],
+    scores: Mapping[str, npt.ArrayLike],
 ) -> dict[str, np.ndarray]:
     if truth.ndim != 1 or len(truth) == 0 or not np.isfinite(truth).all():
         raise ValueError("true_cate must be a nonempty finite vector.")

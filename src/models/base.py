@@ -12,6 +12,10 @@ def make_classifier(random_state: int = 42, **kwargs: Any):
 
     LightGBM is preferred for the project. The sklearn fallback keeps the repo
     runnable in a fresh environment where LightGBM has not been installed yet.
+
+    ``n_jobs=-1`` is safe for reproducibility here: LightGBM's histogram
+    construction is deterministic in the thread count, so predictions are
+    bit-identical across 1, 8, and all cores. See ``docs/determinism.md``.
     """
     try:
         from lightgbm import LGBMClassifier
@@ -22,7 +26,7 @@ def make_classifier(random_state: int = 42, **kwargs: Any):
             "num_leaves": 31,
             "subsample": 0.9,
             "colsample_bytree": 0.9,
-            "n_jobs": 1,
+            "n_jobs": -1,
             "random_state": random_state,
             "verbosity": -1,
         }
@@ -51,7 +55,7 @@ def make_regressor(random_state: int = 42, **kwargs: Any):
             "num_leaves": 31,
             "subsample": 0.9,
             "colsample_bytree": 0.9,
-            "n_jobs": 1,
+            "n_jobs": -1,
             "random_state": random_state,
             "verbosity": -1,
         }

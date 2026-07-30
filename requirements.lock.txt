@@ -1,0 +1,16 @@
+# Exact versions used to produce every number in README.md, on CPython 3.12.4
+# (Windows 11, 20 logical cores). Direct dependencies only; transitive versions
+# are left to the resolver because no result in this project depends on them.
+#
+# Regenerate the numbers with:
+#   python -m pip install -r requirements.lock.txt
+pandas==3.0.2
+numpy==2.4.4
+scikit-learn==1.7.2
+scipy==1.17.1
+matplotlib==3.10.8
+duckdb==1.5.4
+lightgbm==4.6.0
+scikit-uplift==0.5.1
+pytest==8.3.5
+ruff==0.14.13

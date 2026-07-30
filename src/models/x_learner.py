@@ -31,7 +31,7 @@ class XLearner:
         y: pd.Series,
         treatment: pd.Series,
         random_state: int = 42,
-    ) -> "XLearner":
+    ) -> XLearner:
         if self.treated_outcome_model is None:
             self.treated_outcome_model = make_classifier(random_state=random_state)
         if self.control_outcome_model is None:

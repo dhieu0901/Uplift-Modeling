@@ -9,7 +9,6 @@ import sys
 import duckdb
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -18,7 +17,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from src.data.criteo import (
-    CRITEO_REQUIRED_COLUMNS,
+    count_overlapping_rows,
     prepare_criteo_audit_sample,
 )
 from src.reporting import dataframe_to_markdown
@@ -92,7 +91,6 @@ def summarize_audit(
     audit_path: Path,
     excluded_paths: list[Path],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    hash_expression = f"hash({', '.join(CRITEO_REQUIRED_COLUMNS)})"
     audit_sql = _sql_path(audit_path)
     with duckdb.connect() as connection:
         audit_summary = connection.execute(
@@ -105,29 +103,13 @@ def summarize_audit(
             FROM read_parquet('{audit_sql}')
             """
         ).fetch_df()
-        rows = []
-        for excluded_path in excluded_paths:
-            excluded_sql = _sql_path(excluded_path)
-            overlap = connection.execute(
-                f"""
-                SELECT count(*) AS overlap_rows
-                FROM (
-                    SELECT {hash_expression} AS row_hash
-                    FROM read_parquet('{audit_sql}')
-                ) AS audit
-                SEMI JOIN (
-                    SELECT DISTINCT {hash_expression} AS row_hash
-                    FROM read_parquet('{excluded_sql}')
-                ) AS excluded
-                USING (row_hash)
-                """
-            ).fetchone()[0]
-            rows.append(
-                {
-                    "excluded_sample": excluded_path.relative_to(ROOT).as_posix(),
-                    "overlap_rows": int(overlap),
-                }
-            )
+    rows = [
+        {
+            "excluded_sample": excluded_path.relative_to(ROOT).as_posix(),
+            "overlap_rows": count_overlapping_rows(audit_path, excluded_path),
+        }
+        for excluded_path in excluded_paths
+    ]
     return audit_summary, pd.DataFrame(rows)
 
 

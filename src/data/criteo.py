@@ -145,6 +145,41 @@ def prepare_criteo_audit_sample(
     return output_path
 
 
+def count_overlapping_rows(
+    left_path: str | Path,
+    right_path: str | Path,
+) -> int:
+    """Count rows of ``left_path`` whose full-column hash occurs in ``right_path``.
+
+    Disjointness is the load-bearing assumption behind every confirmatory
+    number in this project, so it is verified as a reusable query rather than
+    trusted from how a sample was constructed. Both files must be Parquet.
+    """
+    left = _require_file(left_path)
+    right = _require_file(right_path)
+    if left.suffix.lower() != ".parquet" or right.suffix.lower() != ".parquet":
+        raise ValueError("Overlap checks require Parquet samples.")
+
+    duckdb = _import_duckdb()
+    hash_expression = f"hash({', '.join(CRITEO_REQUIRED_COLUMNS)})"
+    with duckdb.connect() as connection:
+        overlap = connection.execute(
+            f"""
+            SELECT count(*)
+            FROM (
+                SELECT {hash_expression} AS row_hash
+                FROM read_parquet('{_sql_path(left)}')
+            ) AS left_rows
+            SEMI JOIN (
+                SELECT DISTINCT {hash_expression} AS row_hash
+                FROM read_parquet('{_sql_path(right)}')
+            ) AS right_rows
+            USING (row_hash)
+            """
+        ).fetchone()[0]
+    return int(overlap)
+
+
 def load_criteo(
     path: str | Path = "data/processed/criteo_sample_500k.parquet",
     outcome: str = "visit",

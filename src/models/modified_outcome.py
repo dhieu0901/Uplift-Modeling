@@ -28,7 +28,7 @@ class ModifiedOutcomeModel:
         y: pd.Series,
         treatment: pd.Series,
         random_state: int = 42,
-    ) -> "ModifiedOutcomeModel":
+    ) -> ModifiedOutcomeModel:
         del random_state  # Ridge is deterministic.
         treatment_values = treatment.to_numpy(dtype=float)
         self.propensity_ = float(treatment_values.mean())

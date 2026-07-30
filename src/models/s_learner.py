@@ -20,7 +20,7 @@ class SLearner:
         y: pd.Series,
         treatment: pd.Series,
         random_state: int = 42,
-    ) -> "SLearner":
+    ) -> SLearner:
         if self.model is None:
             self.model = make_classifier(random_state=random_state)
         X_fit = self._with_treatment(X, treatment)

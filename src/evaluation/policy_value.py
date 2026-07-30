@@ -4,6 +4,7 @@ from collections.abc import Mapping, Sequence
 from statistics import NormalDist
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 
@@ -66,7 +67,7 @@ def doubly_robust_treatment_effect_scores(
 def aipw_policy_value_table(
     y: Sequence[float],
     treatment: Sequence[int],
-    scores: Mapping[str, Sequence[float]],
+    scores: Mapping[str, npt.ArrayLike],
     mu0: Sequence[float],
     mu1: Sequence[float],
     propensity: float,
@@ -146,7 +147,7 @@ def aipw_policy_value_table(
 def aipw_policy_contrast_table(
     y: Sequence[float],
     treatment: Sequence[int],
-    scores: Mapping[str, Sequence[float]],
+    scores: Mapping[str, npt.ArrayLike],
     reference_policy: str,
     mu0: Sequence[float],
     mu1: Sequence[float],
@@ -279,7 +280,7 @@ def select_best_campaign(
     if not allow_no_campaign or float(best["net_value"]) > 0:
         return best
 
-    no_campaign = {column: np.nan for column in policy_table.columns}
+    no_campaign = dict.fromkeys(policy_table.columns, np.nan)
     no_campaign.update(
         {
             "policy": "no_campaign",
@@ -340,7 +341,7 @@ def _validate_aipw_inputs(
 
 
 def _validate_policy_scores(
-    scores: Mapping[str, Sequence[float]],
+    scores: Mapping[str, npt.ArrayLike],
     expected_length: int,
 ) -> dict[str, np.ndarray]:
     if not scores:

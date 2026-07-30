@@ -30,7 +30,10 @@ def uplift_calibration_table(
         else np.asarray(binning_score, dtype=float)
     )
     if ranking_arr.shape != score_arr.shape or not np.isfinite(ranking_arr).all():
-        raise ValueError("binning_score must match predicted_uplift in shape and contain finite values.")
+        raise ValueError(
+            "binning_score must match predicted_uplift in shape and contain "
+            "finite values."
+        )
 
     order = np.argsort(ranking_arr, kind="mergesort")[::-1]
     y_sorted = y_arr[order]
@@ -150,8 +153,13 @@ def _validate_inputs(
     n_bins: int,
     confidence_level: float,
 ) -> None:
-    if not (y.ndim == treatment.ndim == score.ndim == 1 and len(y) == len(treatment) == len(score)):
-        raise ValueError("y, treatment, and predicted_uplift must be one-dimensional arrays of equal length.")
+    same_shape = y.ndim == treatment.ndim == score.ndim == 1
+    same_length = len(y) == len(treatment) == len(score)
+    if not (same_shape and same_length):
+        raise ValueError(
+            "y, treatment, and predicted_uplift must be one-dimensional arrays "
+            "of equal length."
+        )
     if len(y) == 0:
         raise ValueError("Cannot evaluate calibration on empty data.")
     if n_bins < 2:

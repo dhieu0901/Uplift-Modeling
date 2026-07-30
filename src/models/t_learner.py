@@ -20,7 +20,7 @@ class TLearner:
         y: pd.Series,
         treatment: pd.Series,
         random_state: int = 42,
-    ) -> "TLearner":
+    ) -> TLearner:
         if self.treated_model is None:
             self.treated_model = make_classifier(random_state=random_state)
         if self.control_model is None:

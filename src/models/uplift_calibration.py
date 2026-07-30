@@ -21,7 +21,7 @@ class UpliftIsotonicCalibrator:
         y,
         treatment,
         propensity: float | None = None,
-    ) -> "UpliftIsotonicCalibrator":
+    ) -> UpliftIsotonicCalibrator:
         score_arr, y_arr, treatment_arr = _validate_inputs(score, y, treatment)
         propensity_value = (
             float(treatment_arr.mean()) if propensity is None else float(propensity)

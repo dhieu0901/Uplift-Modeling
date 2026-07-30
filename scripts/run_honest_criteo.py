@@ -6,13 +6,7 @@ import argparse
 from pathlib import Path
 import sys
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -29,8 +23,7 @@ from src.models.registry import (
     rare_outcome_model_factories,
     select_model_factories,
 )
-from src.reporting import dataframe_to_markdown
-
+from src.reporting import dataframe_to_markdown, plot_policy_value_curve
 
 DEFAULT_MODELS = (
     "response_model,s_learner,t_learner,x_learner,cvt,"
@@ -168,7 +161,7 @@ def main() -> None:
         index=False,
         encoding="utf-8-sig",
     )
-    plot_locked_test(result.test_policy_values, figure_path)
+    plot_policy_value_curve(result.test_policy_values, figure_path)
     report_path.write_text(
         build_report(
             args,
@@ -221,37 +214,6 @@ def _parse_float_values(
     return values
 
 
-def plot_locked_test(table: pd.DataFrame, output_path: Path) -> None:
-    figure, axis = plt.subplots(figsize=(8.5, 5.2))
-    colors = {
-        "response_model": "#d97706",
-    }
-    for policy, group in table.groupby("policy", sort=False):
-        group = group.sort_values("budget_pct")
-        center = group["incremental_outcome"].to_numpy(dtype=float)
-        lower = group["ci_lower"].to_numpy(dtype=float)
-        upper = group["ci_upper"].to_numpy(dtype=float)
-        axis.errorbar(
-            group["budget_pct"],
-            center,
-            yerr=np.vstack([center - lower, upper - center]),
-            marker="o",
-            capsize=4,
-            linewidth=2,
-            color=colors.get(policy, "#147d64"),
-            label=policy,
-        )
-    axis.axhline(0.0, color="#5b6470", linewidth=1)
-    axis.set_title("Locked-test AIPW incremental outcomes")
-    axis.set_xlabel("Targeting budget (%)")
-    axis.set_ylabel("Incremental outcomes vs. no treatment")
-    axis.grid(alpha=0.2)
-    axis.legend()
-    figure.tight_layout()
-    figure.savefig(output_path, dpi=180, bbox_inches="tight")
-    plt.close(figure)
-
-
 def build_report(
     args: argparse.Namespace,
     result,
@@ -299,6 +261,11 @@ def build_report(
         decision = "showed a negative advantage relative to response targeting"
     else:
         decision = "was inconclusive relative to response targeting"
+    test_fraction = 1.0 - args.train_fraction - args.validation_fraction
+    split_summary = (
+        f"`{args.train_fraction:.2f}` / `{args.validation_fraction:.2f}` / "
+        f"`{test_fraction:.2f}`"
+    )
     selection_description = (
         "one explicit validation holdout"
         if result.selection_folds == 1
@@ -313,13 +280,19 @@ def build_report(
 ## Locked Protocol
 
 - Data: `{args.sample_path}` ({dataset_size:,} rows), outcome `{args.outcome}`.
-- Base train/validation/test fractions: `{args.train_fraction:.2f}` / `{args.validation_fraction:.2f}` / `{1.0 - args.train_fraction - args.validation_fraction:.2f}`.
-- Selection folds: `{result.selection_folds}` over `{result.selection_size:,}` selection observations.
+- Base train/validation/test fractions: {split_summary}.
+- Selection folds: `{result.selection_folds}` over
+  `{result.selection_size:,}` selection observations.
 - Primary targeting budget: `{100.0 * args.primary_budget:.2f}%`.
 - Confidence level: `{100.0 * args.confidence_level:.1f}%`.
-- Candidate model and hyperparameter selection uses {selection_description}; locked-test outcomes are excluded.
-- The champion is the candidate with the largest paired AIPW lower confidence bound against response targeting at the primary budget.
-- After selection, the champion and response baseline are refit on train + validation.
+- Candidate model and hyperparameter selection uses {selection_description};
+  locked-test outcomes are excluded.
+- The champion is the candidate with the largest paired AIPW lower confidence
+  bound against response targeting at the primary budget.
+- Reference policies `response_model` and `random_targeting` are always
+  evaluated but can never win selection.
+- After selection, the champion and reference policies are refit on
+  train + validation.
 - Locked-test outcomes are opened once for the final comparison.
 
 ## Out-of-Sample Development Selection

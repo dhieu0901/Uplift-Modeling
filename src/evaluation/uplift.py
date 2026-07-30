@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
@@ -169,7 +170,8 @@ def auuc(curve: pd.DataFrame) -> float:
         return float("nan")
     if hasattr(np, "trapezoid"):
         return float(np.trapezoid(clean["incremental_outcome"], clean["fraction"]))
-    return float(np.trapz(clean["incremental_outcome"], clean["fraction"]))
+    # NumPy < 2.0 fallback; the modern name is used above when available.
+    return float(np.trapz(clean["incremental_outcome"], clean["fraction"]))  # noqa: NPY201
 
 
 def qini_coefficient(curve: pd.DataFrame) -> float:
@@ -186,7 +188,8 @@ def qini_coefficient(curve: pd.DataFrame) -> float:
     difference = clean["incremental_outcome"].to_numpy() - random_curve
     if hasattr(np, "trapezoid"):
         return float(np.trapezoid(difference, clean["fraction"]))
-    return float(np.trapz(difference, clean["fraction"]))
+    # NumPy < 2.0 fallback; the modern name is used above when available.
+    return float(np.trapz(difference, clean["fraction"]))  # noqa: NPY201
 
 
 def separate_relative_auuc(
@@ -237,7 +240,7 @@ def separate_relative_auuc(
 def budget_policy_table(
     y: Sequence[float],
     treatment: Sequence[int],
-    scores: Mapping[str, Sequence[float]],
+    scores: Mapping[str, npt.ArrayLike],
     fractions: Sequence[float] = (0.05, 0.10, 0.20, 0.30),
 ) -> pd.DataFrame:
     """Compare targeting policies at fixed budget fractions."""

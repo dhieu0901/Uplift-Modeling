@@ -30,7 +30,7 @@ class RLearner:
         y: pd.Series,
         treatment: pd.Series,
         random_state: int = 42,
-    ) -> "RLearner":
+    ) -> RLearner:
         treatment_arr = treatment.to_numpy(dtype=float)
         self.propensity_ = float(treatment_arr.mean())
         if not 0.0 < self.propensity_ < 1.0:

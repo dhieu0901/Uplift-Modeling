@@ -9,8 +9,9 @@ from sklearn.preprocessing import StandardScaler
 from src.models.cvt_learner import CVTLearner
 from src.models.dr_learner import DRLearner
 from src.models.modified_outcome import ModifiedOutcomeModel
-from src.models.response_model import ResponseModel
 from src.models.r_learner import RLearner
+from src.models.random_targeting import RandomTargetingModel
+from src.models.response_model import ResponseModel
 from src.models.s_learner import SLearner
 from src.models.t_learner import TLearner
 from src.models.undersampled import (
@@ -19,8 +20,13 @@ from src.models.undersampled import (
 )
 from src.models.x_learner import XLearner
 
-
 ModelFactory = Callable[[], object]
+
+#: Policies that are always evaluated for context but can never win selection.
+#: ``response_model`` is the incumbent the project must beat; ``random_targeting``
+#: is the floor that shows how much of any reported gain is ranking skill rather
+#: than the mere act of treating users.
+REFERENCE_POLICIES = ("response_model", "random_targeting")
 
 
 def default_model_factories(
@@ -29,6 +35,7 @@ def default_model_factories(
     """Return fresh factories for the standard response/uplift benchmark."""
     return {
         "response_model": ResponseModel,
+        "random_targeting": RandomTargetingModel,
         "s_learner": SLearner,
         "t_learner": TLearner,
         "x_learner": XLearner,
@@ -48,8 +55,9 @@ def select_model_factories(
     unknown = sorted(set(selected_names) - set(registry))
     if unknown:
         raise ValueError(f"Unsupported models: {unknown}")
-    if "response_model" not in selected_names:
-        selected_names.insert(0, "response_model")
+    for reference in reversed(REFERENCE_POLICIES):
+        if reference not in selected_names:
+            selected_names.insert(0, reference)
     return {name: registry[name] for name in selected_names}
 
 

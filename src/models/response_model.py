@@ -24,7 +24,7 @@ class ResponseModel:
         y: pd.Series,
         treatment: pd.Series | None = None,
         random_state: int = 42,
-    ) -> "ResponseModel":
+    ) -> ResponseModel:
         if self.model is None:
             self.model = make_classifier(random_state=random_state)
 

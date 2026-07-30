@@ -12,7 +12,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -29,7 +28,6 @@ from src.evaluation.ground_truth import (
 from src.experiments.honest_uplift import run_honest_uplift_experiment
 from src.models.registry import select_model_factories
 from src.reporting import dataframe_to_markdown
-
 
 DEFAULT_MODELS = (
     "response_model,s_learner,t_learner,x_learner,cvt,"
@@ -113,7 +111,18 @@ def main() -> None:
 
     test_truth = synthetic.true_cate[result.splits.test.indices]
     evaluation_scores = {**result.test_scores, "oracle": test_truth}
-    cate_metrics = ground_truth_cate_metrics(test_truth, evaluation_scores)
+    # `random_targeting` is a policy reference, not a CATE estimator: its score
+    # is uniform noise, so PEHE and rank correlation against the true CATE are
+    # not meaningful. It stays in the policy table, where it shows the value a
+    # budget collects without any ranking skill at all.
+    cate_metrics = ground_truth_cate_metrics(
+        test_truth,
+        {
+            name: score
+            for name, score in evaluation_scores.items()
+            if name != "random_targeting"
+        },
+    )
     true_policy_values = ground_truth_policy_table(
         test_truth,
         evaluation_scores,

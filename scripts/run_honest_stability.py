@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -28,7 +27,6 @@ from src.models.registry import (
     select_model_factories,
 )
 from src.reporting import dataframe_to_markdown
-
 
 DEFAULT_MODELS = "response_model,s_learner"
 

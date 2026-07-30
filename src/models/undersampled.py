@@ -25,7 +25,7 @@ class UndersampledTLearner:
         y: pd.Series,
         treatment: pd.Series,
         random_state: int = 42,
-    ) -> "UndersampledTLearner":
+    ) -> UndersampledTLearner:
         sampled = stratified_negative_undersample(
             X,
             y,
@@ -67,11 +67,29 @@ class UndersampledTLearner:
 
 @dataclass
 class UndersampledCVTLearner:
-    """CVT learner trained with treatment-stratified negative undersampling."""
+    """CVT learner trained with treatment-stratified negative undersampling.
+
+    Unlike :class:`UndersampledTLearner`, this learner returns a score on the
+    *undersampled* outcome scale and cannot be corrected back to the original
+    scale. CVT with propensity rebalancing estimates the single quantity
+    ``mu1_s(X) - mu0_s(X)``, whereas inverting case-control sampling requires
+    each arm's probability separately: ``mu_t = r_t * mu_ts / (1 - mu_ts +
+    r_t * mu_ts)`` is nonlinear, so the difference of corrected probabilities
+    is not recoverable from the corrected difference.
+
+    A previous version divided the score by ``factor``. That is a positive
+    constant rescaling, so it left every ranking, every fixed-budget policy,
+    and every reported number unchanged while implying a calibration that had
+    not been performed. The division is gone and the scale is now documented
+    instead: this score is valid for ranking and fixed-budget targeting, and
+    must not be read as an absolute probability difference. Use
+    :class:`UndersampledTLearner` when absolute magnitude matters.
+    """
 
     factor: float
     learner: CVTLearner | None = None
     sampled_size_: int | None = None
+    negative_keep_rates_: tuple[float, float] | None = None
 
     def fit(
         self,
@@ -79,7 +97,7 @@ class UndersampledCVTLearner:
         y: pd.Series,
         treatment: pd.Series,
         random_state: int = 42,
-    ) -> "UndersampledCVTLearner":
+    ) -> UndersampledCVTLearner:
         sampled = stratified_negative_undersample(
             X,
             y,
@@ -96,14 +114,14 @@ class UndersampledCVTLearner:
             random_state=random_state,
         )
         self.sampled_size_ = sampled.sampled_size
+        self.negative_keep_rates_ = sampled.negative_keep_rates
         return self
 
     def predict_uplift(self, X: pd.DataFrame) -> np.ndarray:
+        """Return a rank-valid uplift score on the undersampled scale."""
         if self.learner is None or self.sampled_size_ is None:
             raise RuntimeError("UndersampledCVTLearner has not been fitted.")
-        return np.asarray(self.learner.predict_uplift(X), dtype=float) / float(
-            self.factor
-        )
+        return np.asarray(self.learner.predict_uplift(X), dtype=float)
 
 
 def _restore_original_probability(

@@ -32,7 +32,7 @@ class CVTLearner:
         y: pd.Series,
         treatment: pd.Series,
         random_state: int = 42,
-    ) -> "CVTLearner":
+    ) -> CVTLearner:
         treatment_values = treatment.to_numpy(dtype=int)
         self.propensity_ = float(treatment_values.mean())
         if not 0.0 < self.propensity_ < 1.0:

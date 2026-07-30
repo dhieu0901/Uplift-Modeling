@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -275,7 +274,8 @@ def split_train_calibration_test(
         raise ValueError("train_fraction must be in the interval (0, 1).")
     if not 0.0 < calibration_fraction < 1.0 - train_fraction:
         raise ValueError(
-            "calibration_fraction must be positive and smaller than the share remaining after training."
+            "calibration_fraction must be positive and smaller than the share "
+            "remaining after training."
         )
 
     strata = dataset.treatment.astype(str) + "_" + dataset.y.astype(str)
@@ -362,7 +362,7 @@ def plot_calibration(
     )
     colors = {"raw": "#d97706", "calibrated": "#147d64"}
     markers = {"raw": "o", "calibrated": "s"}
-    for axis, model_name in zip(axes[0], model_names):
+    for axis, model_name in zip(axes[0], model_names, strict=True):
         model_data = calibration_bins[calibration_bins["model"] == model_name]
         low = min(
             float(model_data["predicted_uplift"].min()),
@@ -433,7 +433,9 @@ def build_report(
             "ci_upper",
         ]
     ]
-    comparison = summary_table.pivot(
+    # `pivot` is deliberate: one row per (model, score_version) already exists,
+    # so `pivot_table` would silently average duplicates instead of failing.
+    comparison = summary_table.pivot(  # noqa: PD010
         index="model", columns="score_version", values="weighted_mae"
     ).reset_index()
     comparison["mae_change"] = comparison["calibrated"] - comparison["raw"]
@@ -445,17 +447,25 @@ def build_report(
     )
     figure_relative = Path("figures") / figure_path.name
     bins_relative = bins_path.relative_to(ROOT).as_posix()
+    break_even_threshold = uplift_score_threshold(
+        args.outcome_value,
+        args.treatment_cost,
+    )
+    split_summary = " / ".join(
+        f"{split_sizes[name]:,}" for name in ("train", "calibration", "test")
+    )
 
     return f"""# Uplift-Score Calibration on an Independent Holdout
 
 ## Setup
 
 - Data: `{args.sample_path}` ({dataset_size:,} rows), outcome `{args.outcome}`.
-- Train/calibration/test: {split_sizes['train']:,} / {split_sizes['calibration']:,} / {split_sizes['test']:,}.
+- Train/calibration/test rows: {split_summary}.
 - Treatment propensity estimated from training data: `{propensity:.6f}`.
 - Model: `{args.models}`; random seed `{args.random_state}`.
 - The isotonic calibrator is fitted only on the calibration set using transformed outcomes.
-- The calibrator is fitted on `{args.calibrator_bins}` weighted quantile groups to reduce pseudo-outcome noise.
+- The calibrator is fitted on `{args.calibrator_bins}` weighted quantile groups
+  to reduce pseudo-outcome noise.
 - Calibration metrics and threshold policies are evaluated only on the untouched test holdout.
 
 ## Calibration Results Summary
@@ -477,18 +487,23 @@ Bin 1 contains the group with the highest raw scores. The confidence interval is
 a normal approximation for the difference between treatment and control rates
 within each bin. All bins are stored at `{bins_relative}`.
 
-## Policy Based on the Economic Threshold
+## Threshold Policy Under Assumed Unit Economics
 
-- Value of one incremental {args.outcome}: `{args.outcome_value:.2f}`.
-- Cost per targeting action: `{args.treatment_cost:.2f}`.
-- Break-even uplift threshold: `{uplift_score_threshold(args.outcome_value, args.treatment_cost):.6f}`.
+> **These currency figures are a worked example, not a finding.** The outcome
+> value and the cost per contact below are command-line placeholders, not
+> measured business inputs. Nothing here supports a revenue or ROI claim; the
+> section exists only to show how a calibrated score would be turned into a
+> break-even decision rule once real unit economics are available.
+
+- Assumed value of one incremental {args.outcome}: `{args.outcome_value:.2f}`.
+- Assumed cost per targeting action: `{args.treatment_cost:.2f}`.
+- Implied break-even uplift threshold: `{break_even_threshold:.6f}`.
 
 {dataframe_to_markdown(threshold_table)}
 
-Only `calibrated` rows should be used to interpret absolute thresholds. The
-monetary scenario remains illustrative; the fixed 5% budget from the stability
-analysis is a more reliable choice for the online experiment if calibration is
-not sufficiently stable.
+Only `calibrated` rows can carry an absolute interpretation, because a raw score
+is not on the probability scale. While calibration stability is unproven, the
+fixed 5% budget remains the safer operating rule for the online experiment.
 
 ## Runtime
 
@@ -496,7 +511,8 @@ not sufficiently stable.
 
 ## Recommendations
 
-- Use the calibration plot to validate score magnitude, not as a replacement for AUUC as a ranking metric.
+- Use the calibration plot to validate score magnitude, not as a replacement
+  for AUUC as a ranking metric.
 - Do not select a threshold on the test holdout after reviewing its results.
 - Lock the model, calibrator, and threshold before the randomized online experiment.
 """

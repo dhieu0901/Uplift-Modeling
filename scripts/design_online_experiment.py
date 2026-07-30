@@ -9,7 +9,6 @@ import sys
 
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -281,7 +280,8 @@ each policy arm.
 - No-campaign visit rate: `{args.no_campaign_rate:.6f}`.
 - Implied visit rates for arms A/B: `{rate_a:.6f}` / `{rate_b:.6f}`.
 - Offline A-B difference: `{rate_a - rate_b:.6f}`.
-- Planning effect retains `{args.planning_effect_fraction:.0%}` of the offline difference: `{planned_difference:.6f}`.
+- Planning effect retains `{args.planning_effect_fraction:.0%}` of the offline
+  difference: `{planned_difference:.6f}`.
 - Two-sided test, alpha `{args.alpha:.2f}`, power `{args.power:.0%}`.
 - Buffer for attrition/logging loss: `{args.buffer_fraction:.0%}`.
 

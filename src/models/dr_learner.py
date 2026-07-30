@@ -25,7 +25,7 @@ class DRLearner:
         y: pd.Series,
         treatment: pd.Series,
         random_state: int = 42,
-    ) -> "DRLearner":
+    ) -> DRLearner:
         treatment_arr = treatment.to_numpy(dtype=float)
         y_arr = y.to_numpy(dtype=float)
         self.propensity_ = float(treatment_arr.mean())

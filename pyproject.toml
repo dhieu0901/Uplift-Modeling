@@ -1,0 +1,51 @@
+[project]
+name = "honest-uplift"
+version = "1.0.0"
+description = "Does uplift targeting beat response targeting at a fixed campaign budget?"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", "data", "outputs"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # import sorting
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "C4",   # comprehensions
+    "SIM",  # simplifications
+    "PTH",  # prefer pathlib over os.path
+    "NPY",  # numpy legacy API
+    "PD",   # pandas anti-patterns
+    "RUF",
+]
+ignore = [
+    # Counts are wrapped in an explicit `int()` on purpose. Callers may pass
+    # numpy scalars, and `round()` on a numpy float returns a numpy float, so
+    # the cast is a guard rather than redundancy.
+    "RUF046",
+]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["src"]
+
+[tool.ty.src]
+# This project uses a flat layout: `src` is an ordinary package imported as
+# `src.*` from the repository root, not a src-layout import root. Without this,
+# type checkers infer `src/` as the root and fail to resolve `src.reporting`.
+root = "."
+
+[tool.pyright]
+extraPaths = ["."]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Test caching is disabled because it writes into the repository root, which is
+# not always writable on the machines this project runs on.
+addopts = "-q -p no:cacheprovider"

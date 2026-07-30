@@ -1,6 +1,15 @@
+import numpy as np
 import pandas as pd
+import pytest
 
-from src.experiments.honest_uplift import select_validation_champion
+from src.data.semisynthetic import SemiSyntheticUpliftDataset
+from src.experiments.honest_uplift import (
+    _model_seed,
+    evaluate_locked_policies,
+    select_validation_champion,
+)
+from src.experiments.splitting import UpliftSplit
+from src.models.registry import select_model_factories
 
 
 def test_champion_is_selected_by_lower_bound_at_locked_budget_only():
@@ -34,3 +43,67 @@ def test_champion_is_selected_by_lower_bound_at_locked_budget_only():
     )
 
     assert champion == "model_b"
+
+
+def test_model_seed_depends_only_on_the_base_seed_and_the_model_name():
+    # Seeding by position in the factory dict meant that adding one candidate
+    # silently reseeded every candidate after it, so two runs sharing a learner
+    # were not comparable. Name-derived seeds remove that coupling.
+    assert _model_seed(777, "s_learner") == _model_seed(777, "s_learner")
+    assert _model_seed(777, "s_learner") != _model_seed(777, "t_learner")
+    assert _model_seed(777, "s_learner") != _model_seed(778, "s_learner")
+    assert 0 <= _model_seed(777, "s_learner") < 2**31 - 1
+
+
+def test_locked_evaluation_scores_a_separate_sample_once(
+    small_uplift_dataset: SemiSyntheticUpliftDataset,
+):
+    dataset = small_uplift_dataset.dataset
+    fit_data = _slice_dataset(dataset, 0, 2000)
+    test_data = _slice_dataset(dataset, 2000, 3000)
+    factories = select_model_factories(["s_learner"])
+
+    result = evaluate_locked_policies(
+        fit_data,
+        test_data,
+        factories,
+        budgets=(0.05, 0.20),
+        random_state=4,
+    )
+
+    assert result.n_fit == 2000
+    assert result.n_test == 1000
+    assert set(result.scores) == {
+        "response_model",
+        "random_targeting",
+        "s_learner",
+    }
+    assert all(score.shape == (1000,) for score in result.scores.values())
+    assert 0.0 < result.propensity < 1.0
+    # The paired contrast is measured against the incumbent, which therefore
+    # cannot appear as its own comparison row.
+    assert "response_model" not in set(result.contrasts["policy"])
+    assert (result.contrasts["reference_policy"] == "response_model").all()
+    assert set(result.policy_values["budget_pct"]) == {5.0, 20.0}
+    assert np.isfinite(result.policy_values["incremental_outcome"]).all()
+
+
+def test_locked_evaluation_requires_the_reference_policy(
+    small_uplift_dataset: SemiSyntheticUpliftDataset,
+):
+    dataset = small_uplift_dataset.dataset
+    data = _slice_dataset(dataset, 0, 500)
+    factories = {"s_learner": select_model_factories(["s_learner"])["s_learner"]}
+
+    with pytest.raises(ValueError, match="response_model"):
+        evaluate_locked_policies(data, data, factories)
+
+
+def _slice_dataset(dataset, start: int, stop: int) -> UpliftSplit:
+    index = np.arange(start, stop)
+    return UpliftSplit(
+        X=dataset.X.iloc[index].reset_index(drop=True),
+        y=dataset.y.iloc[index].reset_index(drop=True),
+        treatment=dataset.treatment.iloc[index].reset_index(drop=True),
+        indices=index,
+    )

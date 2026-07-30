@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+import hashlib
 from time import perf_counter
 
 import numpy as np
@@ -15,8 +16,26 @@ from src.evaluation.policy_value import (
 )
 from src.evaluation.uplift import separate_relative_auuc
 from src.experiments.splitting import HonestUpliftSplits, split_train_validation_test
-from src.models.registry import ModelFactory, default_model_factories
+from src.models.registry import (
+    REFERENCE_POLICIES,
+    ModelFactory,
+    default_model_factories,
+)
 from src.models.t_learner import TLearner
+
+
+@dataclass(frozen=True)
+class LockedPolicyEvaluation:
+    """Outputs from refitting locked policies and opening a test sample once."""
+
+    policy_values: pd.DataFrame
+    contrasts: pd.DataFrame
+    metrics: pd.DataFrame
+    timing_table: pd.DataFrame
+    scores: dict[str, np.ndarray]
+    propensity: float
+    n_fit: int
+    n_test: int
 
 
 @dataclass(frozen=True)
@@ -61,7 +80,9 @@ def run_honest_uplift_experiment(
     factories = model_factories or default_model_factories()
     if "response_model" not in factories:
         raise ValueError("model_factories must include response_model.")
-    uplift_candidates = [name for name in factories if name != "response_model"]
+    uplift_candidates = [
+        name for name in factories if name not in REFERENCE_POLICIES
+    ]
     if not uplift_candidates:
         raise ValueError("At least one uplift candidate is required.")
     normalized_budgets = tuple(float(value) for value in budgets)
@@ -158,69 +179,25 @@ def run_honest_uplift_experiment(
     )
 
     development = _combine_development_splits(splits)
-    final_factories = (
-        factories
-        if evaluate_all_test
-        else {
-            "response_model": factories["response_model"],
-            champion: factories[champion],
+    if evaluate_all_test:
+        final_factories = factories
+    else:
+        final_factories = {
+            name: factories[name]
+            for name in (*REFERENCE_POLICIES, champion)
+            if name in factories
         }
-    )
-    test_scores, final_timing = _fit_and_score_models(
+    locked = evaluate_locked_policies(
+        development,
+        splits.test,
         final_factories,
-        fit_split=development,
-        score_X=splits.test.X,
+        budgets=normalized_budgets,
+        confidence_level=confidence_level,
         random_state=random_state + 20_000,
-        stage="locked_test",
         progress=progress,
     )
-    test_mu0, test_mu1, final_nuisance_seconds = _fit_nuisance_and_predict(
-        development,
-        splits.test.X,
-        random_state=random_state + 30_000,
-    )
-    final_propensity = float(development.treatment.mean())
-    test_policy_values = aipw_policy_value_table(
-        splits.test.y,
-        splits.test.treatment,
-        test_scores,
-        test_mu0,
-        test_mu1,
-        propensity=final_propensity,
-        fractions=normalized_budgets,
-        confidence_level=confidence_level,
-    )
-    test_contrasts = aipw_policy_contrast_table(
-        splits.test.y,
-        splits.test.treatment,
-        test_scores,
-        reference_policy="response_model",
-        mu0=test_mu0,
-        mu1=test_mu1,
-        propensity=final_propensity,
-        fractions=normalized_budgets,
-        confidence_level=confidence_level,
-    )
-    test_metrics = _ranking_metrics(
-        splits.test.y,
-        splits.test.treatment,
-        test_scores,
-    )
-
     timing_table = pd.concat(
-        [
-            validation_timing,
-            final_timing,
-            pd.DataFrame(
-                [
-                    {
-                        "stage": "locked_test",
-                        "model": "aipw_nuisance_t_learner",
-                        "fit_seconds": final_nuisance_seconds,
-                    }
-                ]
-            ),
-        ],
+        [validation_timing, locked.timing_table],
         ignore_index=True,
     )
     return HonestUpliftExperimentResult(
@@ -232,12 +209,12 @@ def run_honest_uplift_experiment(
         validation_policy_values=validation_policy_values,
         validation_contrasts=validation_contrasts,
         validation_metrics=validation_metrics,
-        test_policy_values=test_policy_values,
-        test_contrasts=test_contrasts,
-        test_metrics=test_metrics,
+        test_policy_values=locked.policy_values,
+        test_contrasts=locked.contrasts,
+        test_metrics=locked.metrics,
         timing_table=timing_table,
         validation_scores=validation_scores,
-        test_scores=test_scores,
+        test_scores=locked.scores,
     )
 
 
@@ -265,6 +242,107 @@ def select_validation_champion(
     return str(ordered.iloc[0]["policy"])
 
 
+def evaluate_locked_policies(
+    fit_data,
+    test_data,
+    model_factories: dict[str, ModelFactory],
+    budgets: Sequence[float] = (0.05, 0.10, 0.20, 0.30),
+    confidence_level: float = 0.95,
+    random_state: int = 42,
+    reference_policy: str = "response_model",
+    progress: Callable[[str], None] | None = None,
+) -> LockedPolicyEvaluation:
+    """Refit already-locked policies on ``fit_data`` and score ``test_data`` once.
+
+    No selection happens here. Every choice -- learner, operating budget,
+    confidence level -- must already be locked before this function runs, which
+    is what makes the resulting interval an honest read of the chosen policy.
+
+    Both arguments only need ``X``, ``y``, and ``treatment`` attributes, so a
+    :class:`~src.data.criteo.CriteoDataset` and an
+    :class:`~src.experiments.splitting.UpliftSplit` are equally acceptable. That
+    lets the same code path serve the internal locked test and a confirmatory
+    test drawn from a separate file.
+    """
+    if reference_policy not in model_factories:
+        raise ValueError(f"model_factories must include {reference_policy}.")
+    normalized_budgets = tuple(float(value) for value in budgets)
+
+    scores, timing = _fit_and_score_models(
+        model_factories,
+        fit_split=fit_data,
+        score_X=test_data.X,
+        random_state=random_state,
+        stage="locked_test",
+        progress=progress,
+    )
+    mu0, mu1, nuisance_seconds = _fit_nuisance_and_predict(
+        fit_data,
+        test_data.X,
+        random_state=random_state + 10_000,
+    )
+    propensity = float(fit_data.treatment.mean())
+    policy_values = aipw_policy_value_table(
+        test_data.y,
+        test_data.treatment,
+        scores,
+        mu0,
+        mu1,
+        propensity=propensity,
+        fractions=normalized_budgets,
+        confidence_level=confidence_level,
+    )
+    contrasts = aipw_policy_contrast_table(
+        test_data.y,
+        test_data.treatment,
+        scores,
+        reference_policy=reference_policy,
+        mu0=mu0,
+        mu1=mu1,
+        propensity=propensity,
+        fractions=normalized_budgets,
+        confidence_level=confidence_level,
+    )
+    metrics = _ranking_metrics(test_data.y, test_data.treatment, scores)
+    timing_table = pd.concat(
+        [
+            timing,
+            pd.DataFrame(
+                [
+                    {
+                        "stage": "locked_test",
+                        "model": "aipw_nuisance_t_learner",
+                        "fit_seconds": nuisance_seconds,
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
+    return LockedPolicyEvaluation(
+        policy_values=policy_values,
+        contrasts=contrasts,
+        metrics=metrics,
+        timing_table=timing_table,
+        scores=scores,
+        propensity=propensity,
+        n_fit=len(fit_data.X),
+        n_test=len(test_data.X),
+    )
+
+
+def _model_seed(random_state: int, name: str) -> int:
+    """Derive a per-model seed that does not depend on the candidate set.
+
+    Seeding by a model's position in the factory dict means that adding or
+    removing one candidate silently reseeds every candidate after it, so two
+    runs that share a learner are not comparable. Hashing the name keeps each
+    seed a function of the base seed and the model name only.
+    """
+    digest = hashlib.blake2b(name.encode("utf-8"), digest_size=4).digest()
+    return int((int(random_state) + int.from_bytes(digest, "big")) % (2**31 - 1))
+
+
 def _fit_and_score_models(
     factories: dict[str, ModelFactory],
     fit_split,
@@ -275,7 +353,7 @@ def _fit_and_score_models(
 ) -> tuple[dict[str, np.ndarray], pd.DataFrame]:
     scores = {}
     timing_rows = []
-    for offset, (name, factory) in enumerate(factories.items()):
+    for name, factory in factories.items():
         if progress is not None:
             progress(f"{stage}: {name}")
         model = factory()
@@ -284,7 +362,7 @@ def _fit_and_score_models(
             fit_split.X,
             fit_split.y,
             fit_split.treatment,
-            random_state=random_state + offset,
+            random_state=_model_seed(random_state, name),
         )
         elapsed = perf_counter() - started
         if name == "response_model":

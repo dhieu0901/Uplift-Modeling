@@ -1,10 +1,16 @@
+# Raw and processed Criteo data are far too large for version control and are
+# rebuilt by scripts/prepare_criteo.py and scripts/prepare_audit_sample.py.
 /data/
+
+# Generated evidence under /outputs/ IS tracked on purpose: the tables, reports,
+# and figures are the only way a reader can check the numbers in README.md
+# without a multi-hour rerun against a 300 MB source file.
+
 /.agents/
 /.venv/
 /venv/
 /.pytest_cache/
 /.pytest-tmp/
 /.ruff_cache/
-/outputs/
 __pycache__/
 *.py[cod]
