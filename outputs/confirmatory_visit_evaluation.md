@@ -18,7 +18,7 @@ level, and the estimator were all locked before this sample was drawn.
 - Locked champion: `s_learner` (selected earlier, on development data only).
 - Refit sample: `data/processed/criteo_audit_1m.parquet` (1,000,000 rows).
 - Confirmatory sample: `data/processed/criteo_confirm_4m.parquet` (4,000,000 rows), opened once.
-- Verified overlap between the two samples: **0 rows**, by full-row hash.
+- Verified overlap between the two samples: **0 rows**, by `row_id`.
 - Reference policies: `response_model` (the incumbent) and `random_targeting`
   (the floor that shows how much of any gain is ranking skill).
 - Treatment propensity used by AIPW: `0.850017`.
@@ -93,10 +93,10 @@ share of users.
 
 | stage       | model                   | fit_seconds |
 | ----------- | ----------------------- | ----------- |
-| locked_test | response_model          | 11.771896   |
-| locked_test | random_targeting        | 0.000052    |
-| locked_test | s_learner               | 9.295238    |
-| locked_test | aipw_nuisance_t_learner | 11.592130   |
+| locked_test | response_model          | 9.766784    |
+| locked_test | random_targeting        | 0.000050    |
+| locked_test | s_learner               | 6.149499    |
+| locked_test | aipw_nuisance_t_learner | 6.863573    |
 
 ## Interpretation Boundaries
 

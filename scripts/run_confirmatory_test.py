@@ -290,7 +290,7 @@ level, and the estimator were all locked before this sample was drawn.
 - Locked champion: `{args.champion}` (selected earlier, on development data only).
 - Refit sample: `{args.fit_path}` ({result.n_fit:,} rows).
 - Confirmatory sample: `{args.test_path}` ({result.n_test:,} rows), opened once.
-- Verified overlap between the two samples: **0 rows**, by full-row hash.
+- Verified overlap between the two samples: **0 rows**, by `row_id`.
 - Reference policies: `response_model` (the incumbent) and `random_targeting`
   (the floor that shows how much of any gain is ranking skill).
 - Treatment propensity used by AIPW: `{result.propensity:.6f}`.

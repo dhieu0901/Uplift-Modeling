@@ -27,7 +27,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Create a confirmatory Criteo sample after excluding every row "
-            "hash used by prior development samples."
+            "already spent by a prior development sample."
         )
     )
     parser.add_argument(
@@ -81,6 +81,7 @@ def main() -> None:
             audit_summary,
             overlap_summary,
             output_path,
+            excluded_paths,
         ),
         encoding="utf-8",
     )
@@ -119,13 +120,17 @@ def build_report(
     audit_summary: pd.DataFrame,
     overlap_summary: pd.DataFrame,
     output_path: Path,
+    excluded_paths: list[Path],
 ) -> str:
+    excluded = ", ".join(
+        f"`{path.relative_to(ROOT).as_posix()}`" for path in excluded_paths
+    )
     return f"""# Confirmatory Criteo Audit Sample
 
 ## Construction
 
-- Indexed source: `{args.index_path}`.
-- Excluded development samples: `{args.excluded_paths}`.
+- Indexed source: `{Path(args.index_path).as_posix()}`.
+- Excluded development samples: {excluded}.
 - Requested rows: `{args.sample_size:,}`.
 - Reservoir seed: `{args.random_state}`.
 - Rows already used by an excluded sample were removed by `row_id` before
@@ -141,7 +146,6 @@ def build_report(
 {dataframe_to_markdown(overlap_summary)}
 
 The audit sample is stored at `{output_path.relative_to(ROOT).as_posix()}`.
-Duplicate-valued rows sharing an excluded hash are conservatively removed.
 """
 
 
