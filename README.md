@@ -108,6 +108,53 @@ sanity check falls into place that had previously failed: random targeting now
 captures 4.2% of the achievable effect at a 5% budget, against the 5% that a
 policy carrying no information should collect.
 
+### Choosing the evaluation estimator
+
+Scoring a targeting policy without labels leaves three options, and they fail in
+different directions:
+
+| Estimator | Uses | Fails when |
+|---|---|---|
+| Outcome regression | `mu_0`, `mu_1` only | The outcome models are wrong. Low variance, but the bias passes straight through. |
+| Inverse propensity weighting | `e` only | The propensity is wrong, or approaches 0 or 1. Unbiased under a correct `e`, but the variance explodes. |
+| **AIPW** | both | Only when **both** are wrong. The outcome models anchor the estimate; the weighted residual corrects them. |
+
+AIPW is *doubly robust*: it stays consistent if either component is correctly
+specified. On observational data that is a hedge — two chances instead of one.
+Here it is stronger than a hedge. The Criteo experiment assigns treatment at a
+known, covariate-independent probability, so `e` is not estimated at all. One
+leg of the double robustness is correct **by construction**, and the estimator
+is unbiased regardless of how badly the outcome models fit.
+
+That is the reason this project can afford to fix one LightGBM configuration
+across all eight candidates and never tune it: the evaluation does not depend on
+the nuisance models being good. It depends on them being *honest*, which is a
+different and cheaper requirement — hence the out-of-fold constraint below.
+
+Three deliberate specializations of the general form:
+
+- **Binary action.** The general policy value averages
+  `pi(X) * Gamma(1) + (1 - pi(X)) * Gamma(0)` over per-arm scores
+  `Gamma(a) = mu_a(X) + 1(T = a) / e_a(X) * (Y - mu_a(X))`. With two actions this
+  collapses to a single score `phi = Gamma(1) - Gamma(0)`, which is what
+  `doubly_robust_treatment_effect_scores` returns.
+- **Value relative to treating nobody.** The campaign decision is "what does
+  spending the budget add", not "what is total outcome", so the reported quantity
+  is `E[pi(X) * phi]` rather than the absolute policy value.
+- **Scalar propensity.** `propensity` is typed `float`, not a per-user vector.
+  This is correct for a randomized design and refuses to silently accept an
+  observational dataset, where `e(X)` would have to be modeled and the double
+  robustness would start doing real work.
+
+The nuisance models must never have seen the outcomes they are used to score;
+otherwise the residual term is shrunk by memorization and the interval is too
+narrow. Cross-fitting enforces this at both levels — across selection folds for
+evaluation, and inside the R- and DR-learners for their own nuisances.
+
+What AIPW does not provide: the interval conditions on the already-fitted
+policy. It carries evaluation uncertainty, not the uncertainty of having chosen
+that learner. That is measured separately, by repeated splits.
+
 ### Protocol
 
 Each experiment reserves 80% for development and 20% as a locked test. Three
@@ -490,7 +537,7 @@ test builds its own fixture or uses the semi-synthetic generator.
 1. [Diemert et al., *A Large Scale Benchmark for Individual Treatment Effect Prediction and Uplift Modeling*](https://arxiv.org/abs/2111.10106) — source of the randomized Criteo dataset and the relative AUUC definition used here.
 2. [Künzel et al., *Metalearners for Estimating Heterogeneous Treatment Effects using Machine Learning*](https://arxiv.org/abs/1706.03461) — basis for the S-, T-, and X-learner family.
 3. [Nyberg, Kuśmierczyk, and Klami, *Uplift Modeling with High Class Imbalance*](https://proceedings.mlr.press/v157/nyberg21a.html) — basis for treatment-stratified negative undersampling and rare-outcome calibration.
-4. [Robins, Rotnitzky, and Zhao, *Estimation of Regression Coefficients When Some Regressors Are Not Always Observed*](https://www.semanticscholar.org/paper/46c56845fbb9e9452a318d736356949bd24fa012) — *JASA* 89(427):846–866, 1994. Origin of the augmented inverse-probability-weighted estimator this project uses to score policies.
+4. [Athey and Wager, *Policy Learning with Observational Data*](https://arxiv.org/abs/1702.02896) — *Econometrica* 89(1):133–161, 2021. Source of the AIPW-score formulation of policy value used to evaluate every targeting rule here. The augmented estimator itself goes back to Robins, Rotnitzky, and Zhao (1994); this project uses the policy-value form rather than the average-effect form.
 
 These are implementation anchors, not a literature review. The sample
 construction, the 5% decision rule, the paired evaluation, the semi-synthetic

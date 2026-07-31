@@ -45,11 +45,14 @@ def doubly_robust_treatment_effect_scores(
 ) -> np.ndarray:
     """Build AIPW pseudo-outcomes whose conditional mean is the CATE.
 
-    The augmented inverse-probability-weighted form is due to Robins,
-    Rotnitzky, and Zhao (1994), *JASA* 89(427):846-866. It is doubly robust:
-    unbiased if either the outcome models or the propensity is correct, and in
-    a randomized design the propensity is known, so the property holds by
-    construction.
+    This is the binary-action collapse of the per-arm AIPW scores used for
+    policy value in Athey and Wager, *Policy Learning with Observational Data*,
+    Econometrica 89(1):133-161. The augmented form originates with Robins,
+    Rotnitzky, and Zhao (1994).
+
+    It is doubly robust: unbiased if either the outcome models or the
+    propensity is correct. In a randomized design the propensity is known, so
+    that condition holds by construction rather than by assumption.
 
     ``mu0`` and ``mu1`` must be predictions from models that did not train on
     the evaluation outcomes. In an RCT, ``propensity`` is the known or locked
