@@ -490,6 +490,7 @@ test builds its own fixture or uses the semi-synthetic generator.
 1. [Diemert et al., *A Large Scale Benchmark for Individual Treatment Effect Prediction and Uplift Modeling*](https://arxiv.org/abs/2111.10106) — source of the randomized Criteo dataset and the relative AUUC definition used here.
 2. [Künzel et al., *Metalearners for Estimating Heterogeneous Treatment Effects using Machine Learning*](https://arxiv.org/abs/1706.03461) — basis for the S-, T-, and X-learner family.
 3. [Nyberg, Kuśmierczyk, and Klami, *Uplift Modeling with High Class Imbalance*](https://proceedings.mlr.press/v157/nyberg21a.html) — basis for treatment-stratified negative undersampling and rare-outcome calibration.
+4. [Robins, Rotnitzky, and Zhao, *Estimation of Regression Coefficients When Some Regressors Are Not Always Observed*](https://www.semanticscholar.org/paper/46c56845fbb9e9452a318d736356949bd24fa012) — *JASA* 89(427):846–866, 1994. Origin of the augmented inverse-probability-weighted estimator this project uses to score policies.
 
 These are implementation anchors, not a literature review. The sample
 construction, the 5% decision rule, the paired evaluation, the semi-synthetic
