@@ -252,8 +252,12 @@ def build_report(
         ascending=False,
         na_position="last",
     )
+    # The verdict must describe the champion. Taking the first row instead
+    # reported whichever policy the table happened to list first -- in practice
+    # the random baseline -- and so stated the opposite conclusion.
     primary_contrast = result.test_contrasts[
         np.isclose(result.test_contrasts["budget_pct"], primary_budget_pct)
+        & (result.test_contrasts["policy"] == result.champion)
     ].iloc[0]
     if primary_contrast["ci_lower"] > 0:
         decision = "confirmed a positive advantage over response targeting"
@@ -279,7 +283,7 @@ def build_report(
 
 ## Locked Protocol
 
-- Data: `{args.sample_path}` ({dataset_size:,} rows), outcome `{args.outcome}`.
+- Data: `{Path(args.sample_path).as_posix()}` ({dataset_size:,} rows), outcome `{args.outcome}`.
 - Base train/validation/test fractions: {split_summary}.
 - Selection folds: `{result.selection_folds}` over
   `{result.selection_size:,}` selection observations.

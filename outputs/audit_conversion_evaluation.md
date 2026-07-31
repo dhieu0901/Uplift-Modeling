@@ -61,9 +61,9 @@ Selected champion: **undersampled_t_lr_k1**.
 | undersampled_t_lr_k1 | response_model   | 30.000000  | 60000      | -0.000040       | 0.000090            | -8.086814   | -43.407088  | 27.233459   |
 
 At the pre-specified `5.00%` budget, the locked test
-showed a negative advantage relative to response targeting. The estimated difference is `-195.1409`
+was inconclusive relative to response targeting. The estimated difference is `-22.3132`
 incremental conversion outcomes with a confidence interval of
-`[-300.0606, -90.2213]`.
+`[-64.8734, 20.2471]`.
 
 ## Ranking Metrics
 
@@ -80,22 +80,22 @@ contrast because the campaign has a fixed operating budget.
 
 | stage            | model                   | fit_seconds |
 | ---------------- | ----------------------- | ----------- |
-| selection_fold_1 | random_targeting        | 0.000043    |
-| selection_fold_1 | response_model          | 6.932283    |
-| selection_fold_1 | undersampled_t_lr_k1    | 1.475778    |
-| selection_fold_1 | aipw_nuisance_t_learner | 4.853700    |
-| selection_fold_2 | random_targeting        | 0.000033    |
-| selection_fold_2 | response_model          | 3.389691    |
-| selection_fold_2 | undersampled_t_lr_k1    | 1.411412    |
-| selection_fold_2 | aipw_nuisance_t_learner | 4.850195    |
-| selection_fold_3 | random_targeting        | 0.000029    |
-| selection_fold_3 | response_model          | 3.332744    |
-| selection_fold_3 | undersampled_t_lr_k1    | 1.299109    |
-| selection_fold_3 | aipw_nuisance_t_learner | 4.576512    |
-| locked_test      | response_model          | 4.144804    |
-| locked_test      | random_targeting        | 0.000042    |
-| locked_test      | undersampled_t_lr_k1    | 1.860886    |
-| locked_test      | aipw_nuisance_t_learner | 6.063185    |
+| selection_fold_1 | random_targeting        | 0.000062    |
+| selection_fold_1 | response_model          | 10.287219   |
+| selection_fold_1 | undersampled_t_lr_k1    | 1.915795    |
+| selection_fold_1 | aipw_nuisance_t_learner | 9.564255    |
+| selection_fold_2 | random_targeting        | 0.000034    |
+| selection_fold_2 | response_model          | 5.831816    |
+| selection_fold_2 | undersampled_t_lr_k1    | 1.919052    |
+| selection_fold_2 | aipw_nuisance_t_learner | 9.763573    |
+| selection_fold_3 | random_targeting        | 0.000032    |
+| selection_fold_3 | response_model          | 6.090716    |
+| selection_fold_3 | undersampled_t_lr_k1    | 1.805453    |
+| selection_fold_3 | aipw_nuisance_t_learner | 9.614760    |
+| locked_test      | response_model          | 7.406766    |
+| locked_test      | random_targeting        | 0.000036    |
+| locked_test      | undersampled_t_lr_k1    | 2.612611    |
+| locked_test      | aipw_nuisance_t_learner | 11.399049   |
 
 ## Statistical Scope
 

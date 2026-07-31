@@ -74,9 +74,9 @@ Selected champion: **undersampled_t_lr_k1**.
 | undersampled_t_lr_k1 | response_model   | 30.000000  | 120000     | 0.000107        | 0.000080            | 42.617287   | -19.930734  | 105.165308 |
 
 At the pre-specified `5.00%` budget, the locked test
-showed a negative advantage relative to response targeting. The estimated difference is `-151.0209`
+was inconclusive relative to response targeting. The estimated difference is `66.0699`
 incremental conversion outcomes with a confidence interval of
-`[-294.1858, -7.8559]`.
+`[-4.3444, 136.4842]`.
 
 ## Ranking Metrics
 
@@ -93,61 +93,61 @@ contrast because the campaign has a fixed operating budget.
 
 | stage            | model                    | fit_seconds |
 | ---------------- | ------------------------ | ----------- |
-| selection_fold_1 | random_targeting         | 0.000058    |
-| selection_fold_1 | response_model           | 13.473558   |
-| selection_fold_1 | undersampled_t_lr_k1     | 4.662146    |
-| selection_fold_1 | undersampled_cvt_lr_k1   | 2.420083    |
-| selection_fold_1 | undersampled_t_lr_k5     | 0.954915    |
-| selection_fold_1 | undersampled_cvt_lr_k5   | 0.626084    |
-| selection_fold_1 | undersampled_t_lr_k10    | 0.501497    |
-| selection_fold_1 | undersampled_cvt_lr_k10  | 0.368546    |
-| selection_fold_1 | undersampled_t_lr_k25    | 0.318926    |
-| selection_fold_1 | undersampled_cvt_lr_k25  | 0.256213    |
-| selection_fold_1 | undersampled_t_lr_k50    | 0.239819    |
-| selection_fold_1 | undersampled_cvt_lr_k50  | 0.211850    |
-| selection_fold_1 | undersampled_t_lr_k100   | 0.203292    |
-| selection_fold_1 | undersampled_cvt_lr_k100 | 0.174817    |
-| selection_fold_1 | undersampled_t_lr_k200   | 0.191335    |
-| selection_fold_1 | undersampled_cvt_lr_k200 | 0.159648    |
-| selection_fold_1 | aipw_nuisance_t_learner  | 13.063684   |
-| selection_fold_2 | random_targeting         | 0.000031    |
-| selection_fold_2 | response_model           | 7.756874    |
-| selection_fold_2 | undersampled_t_lr_k1     | 3.939976    |
-| selection_fold_2 | undersampled_cvt_lr_k1   | 2.386762    |
-| selection_fold_2 | undersampled_t_lr_k5     | 0.920839    |
-| selection_fold_2 | undersampled_cvt_lr_k5   | 0.666118    |
-| selection_fold_2 | undersampled_t_lr_k10    | 0.528999    |
-| selection_fold_2 | undersampled_cvt_lr_k10  | 0.398030    |
-| selection_fold_2 | undersampled_t_lr_k25    | 0.354441    |
-| selection_fold_2 | undersampled_cvt_lr_k25  | 0.269512    |
-| selection_fold_2 | undersampled_t_lr_k50    | 0.243343    |
-| selection_fold_2 | undersampled_cvt_lr_k50  | 0.202883    |
-| selection_fold_2 | undersampled_t_lr_k100   | 0.209285    |
-| selection_fold_2 | undersampled_cvt_lr_k100 | 0.184307    |
-| selection_fold_2 | undersampled_t_lr_k200   | 0.203349    |
-| selection_fold_2 | undersampled_cvt_lr_k200 | 0.171807    |
-| selection_fold_2 | aipw_nuisance_t_learner  | 12.693006   |
-| selection_fold_3 | random_targeting         | 0.000046    |
-| selection_fold_3 | response_model           | 8.899918    |
-| selection_fold_3 | undersampled_t_lr_k1     | 4.431935    |
-| selection_fold_3 | undersampled_cvt_lr_k1   | 2.529903    |
-| selection_fold_3 | undersampled_t_lr_k5     | 0.850530    |
-| selection_fold_3 | undersampled_cvt_lr_k5   | 0.707995    |
-| selection_fold_3 | undersampled_t_lr_k10    | 0.569257    |
-| selection_fold_3 | undersampled_cvt_lr_k10  | 0.392005    |
-| selection_fold_3 | undersampled_t_lr_k25    | 0.325887    |
-| selection_fold_3 | undersampled_cvt_lr_k25  | 0.280307    |
-| selection_fold_3 | undersampled_t_lr_k50    | 0.239522    |
-| selection_fold_3 | undersampled_cvt_lr_k50  | 0.221570    |
-| selection_fold_3 | undersampled_t_lr_k100   | 0.201456    |
-| selection_fold_3 | undersampled_cvt_lr_k100 | 0.167995    |
-| selection_fold_3 | undersampled_t_lr_k200   | 0.186401    |
-| selection_fold_3 | undersampled_cvt_lr_k200 | 0.154655    |
-| selection_fold_3 | aipw_nuisance_t_learner  | 14.074414   |
-| locked_test      | response_model           | 11.762542   |
-| locked_test      | random_targeting         | 0.000048    |
-| locked_test      | undersampled_t_lr_k1     | 6.285796    |
-| locked_test      | aipw_nuisance_t_learner  | 16.751555   |
+| selection_fold_1 | random_targeting         | 0.000055    |
+| selection_fold_1 | response_model           | 13.387008   |
+| selection_fold_1 | undersampled_t_lr_k1     | 4.492013    |
+| selection_fold_1 | undersampled_cvt_lr_k1   | 2.235500    |
+| selection_fold_1 | undersampled_t_lr_k5     | 0.788553    |
+| selection_fold_1 | undersampled_cvt_lr_k5   | 0.561309    |
+| selection_fold_1 | undersampled_t_lr_k10    | 0.485955    |
+| selection_fold_1 | undersampled_cvt_lr_k10  | 0.329144    |
+| selection_fold_1 | undersampled_t_lr_k25    | 0.273346    |
+| selection_fold_1 | undersampled_cvt_lr_k25  | 0.219923    |
+| selection_fold_1 | undersampled_t_lr_k50    | 0.194411    |
+| selection_fold_1 | undersampled_cvt_lr_k50  | 0.173844    |
+| selection_fold_1 | undersampled_t_lr_k100   | 0.167860    |
+| selection_fold_1 | undersampled_cvt_lr_k100 | 0.143873    |
+| selection_fold_1 | undersampled_t_lr_k200   | 0.148071    |
+| selection_fold_1 | undersampled_cvt_lr_k200 | 0.126398    |
+| selection_fold_1 | aipw_nuisance_t_learner  | 15.008474   |
+| selection_fold_2 | random_targeting         | 0.000044    |
+| selection_fold_2 | response_model           | 8.473642    |
+| selection_fold_2 | undersampled_t_lr_k1     | 3.995958    |
+| selection_fold_2 | undersampled_cvt_lr_k1   | 2.250675    |
+| selection_fold_2 | undersampled_t_lr_k5     | 0.787833    |
+| selection_fold_2 | undersampled_cvt_lr_k5   | 0.558882    |
+| selection_fold_2 | undersampled_t_lr_k10    | 0.473745    |
+| selection_fold_2 | undersampled_cvt_lr_k10  | 0.340191    |
+| selection_fold_2 | undersampled_t_lr_k25    | 0.272277    |
+| selection_fold_2 | undersampled_cvt_lr_k25  | 0.232512    |
+| selection_fold_2 | undersampled_t_lr_k50    | 0.194160    |
+| selection_fold_2 | undersampled_cvt_lr_k50  | 0.157520    |
+| selection_fold_2 | undersampled_t_lr_k100   | 0.159181    |
+| selection_fold_2 | undersampled_cvt_lr_k100 | 0.138218    |
+| selection_fold_2 | undersampled_t_lr_k200   | 0.151303    |
+| selection_fold_2 | undersampled_cvt_lr_k200 | 0.130262    |
+| selection_fold_2 | aipw_nuisance_t_learner  | 12.936319   |
+| selection_fold_3 | random_targeting         | 0.000031    |
+| selection_fold_3 | response_model           | 9.370321    |
+| selection_fold_3 | undersampled_t_lr_k1     | 4.281468    |
+| selection_fold_3 | undersampled_cvt_lr_k1   | 2.613814    |
+| selection_fold_3 | undersampled_t_lr_k5     | 0.752628    |
+| selection_fold_3 | undersampled_cvt_lr_k5   | 0.613465    |
+| selection_fold_3 | undersampled_t_lr_k10    | 0.553586    |
+| selection_fold_3 | undersampled_cvt_lr_k10  | 0.350228    |
+| selection_fold_3 | undersampled_t_lr_k25    | 0.337198    |
+| selection_fold_3 | undersampled_cvt_lr_k25  | 0.291000    |
+| selection_fold_3 | undersampled_t_lr_k50    | 0.234687    |
+| selection_fold_3 | undersampled_cvt_lr_k50  | 0.194919    |
+| selection_fold_3 | undersampled_t_lr_k100   | 0.176964    |
+| selection_fold_3 | undersampled_cvt_lr_k100 | 0.142554    |
+| selection_fold_3 | undersampled_t_lr_k200   | 0.164671    |
+| selection_fold_3 | undersampled_cvt_lr_k200 | 0.165566    |
+| selection_fold_3 | aipw_nuisance_t_learner  | 14.290466   |
+| locked_test      | response_model           | 11.480135   |
+| locked_test      | random_targeting         | 0.000034    |
+| locked_test      | undersampled_t_lr_k1     | 5.806967    |
+| locked_test      | aipw_nuisance_t_learner  | 17.041575   |
 
 ## Statistical Scope
 
