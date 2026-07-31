@@ -151,6 +151,14 @@ otherwise the residual term is shrunk by memorization and the interval is too
 narrow. Cross-fitting enforces this at both levels — across selection folds for
 evaluation, and inside the R- and DR-learners for their own nuisances.
 
+Cross-fitting splits the data exactly as k-fold cross-validation does, and is
+there for a different reason. Cross-validation produces a *score* used to rank
+models, and an optimistic score mostly costs ranking accuracy. Cross-fitting
+produces *predictions that enter an estimator*, and an optimistic prediction
+biases the estimate itself and narrows the interval below its nominal coverage.
+Both are used here: three folds to select the champion, and out-of-fold
+nuisances so that the interval around it means what it claims.
+
 What AIPW does not provide: the interval conditions on the already-fitted
 policy. It carries evaluation uncertainty, not the uncertainty of having chosen
 that learner. That is measured separately, by repeated splits.
@@ -538,6 +546,7 @@ test builds its own fixture or uses the semi-synthetic generator.
 2. [Künzel et al., *Metalearners for Estimating Heterogeneous Treatment Effects using Machine Learning*](https://arxiv.org/abs/1706.03461) — basis for the S-, T-, and X-learner family.
 3. [Nyberg, Kuśmierczyk, and Klami, *Uplift Modeling with High Class Imbalance*](https://proceedings.mlr.press/v157/nyberg21a.html) — basis for treatment-stratified negative undersampling and rare-outcome calibration.
 4. [Athey and Wager, *Policy Learning with Observational Data*](https://arxiv.org/abs/1702.02896) — *Econometrica* 89(1):133–161, 2021. Source of the AIPW-score formulation of policy value used to evaluate every targeting rule here. The augmented estimator itself goes back to Robins, Rotnitzky, and Zhao (1994); this project uses the policy-value form rather than the average-effect form.
+5. [Chernozhukov et al., *Double/Debiased Machine Learning for Treatment and Structural Parameters*](https://arxiv.org/abs/1608.00060) — *The Econometrics Journal* 21(1):C1–C68, 2018. Why the nuisance models must be estimated out of fold, and the source of the term *cross-fitting*. Applies twice here: to the AIPW nuisances during evaluation, and inside the R- and DR-learners.
 
 These are implementation anchors, not a literature review. The sample
 construction, the 5% decision rule, the paired evaluation, the semi-synthetic
