@@ -31,8 +31,9 @@ def parse_args() -> argparse.Namespace:
         )
     )
     parser.add_argument(
-        "--raw-path",
-        default="data/criteo-uplift-v2.1.csv.gz",
+        "--index-path",
+        default="data/processed/criteo_indexed.parquet",
+        help="Indexed source file produced by scripts/prepare_criteo.py.",
     )
     parser.add_argument(
         "--excluded-paths",
@@ -62,7 +63,7 @@ def main() -> None:
         if item.strip()
     ]
     output_path = prepare_criteo_audit_sample(
-        ROOT / args.raw_path,
+        ROOT / args.index_path,
         excluded_paths,
         output_path=ROOT / args.output_path,
         sample_size=args.sample_size,
@@ -123,12 +124,13 @@ def build_report(
 
 ## Construction
 
-- Raw source: `{args.raw_path}`.
+- Indexed source: `{args.index_path}`.
 - Excluded development samples: `{args.excluded_paths}`.
 - Requested rows: `{args.sample_size:,}`.
 - Reservoir seed: `{args.random_state}`.
-- All complete benchmark-column hashes present in an excluded sample were
-  removed before reservoir sampling.
+- Rows already used by an excluded sample were removed by `row_id` before
+  reservoir sampling, so exactly those rows are withheld and untouched
+  duplicates of them remain eligible.
 
 ## Audit Summary
 

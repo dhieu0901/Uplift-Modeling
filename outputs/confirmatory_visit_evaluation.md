@@ -21,7 +21,7 @@ level, and the estimator were all locked before this sample was drawn.
 - Verified overlap between the two samples: **0 rows**, by full-row hash.
 - Reference policies: `response_model` (the incumbent) and `random_targeting`
   (the floor that shows how much of any gain is ranking skill).
-- Treatment propensity used by AIPW: `0.845886`.
+- Treatment propensity used by AIPW: `0.850017`.
 - Primary budget `5.00%`, confidence level
   `95.0%`.
 
@@ -29,18 +29,18 @@ level, and the estimator were all locked before this sample was drawn.
 
 | policy           | budget_pct | n_targeted | incremental_outcome_rate | standard_error_rate | ci_lower_rate | ci_upper_rate | incremental_outcome | ci_lower     | ci_upper     |
 | ---------------- | ---------- | ---------- | ------------------------ | ------------------- | ------------- | ------------- | ------------------- | ------------ | ------------ |
-| response_model   | 5.000000   | 200000     | 0.003226                 | 0.000142            | 0.002949      | 0.003504      | 12905.158277        | 11794.185853 | 14016.130701 |
-| response_model   | 10.000000  | 400000     | 0.005131                 | 0.000186            | 0.004767      | 0.005496      | 20525.386111        | 19067.433491 | 21983.338730 |
-| response_model   | 20.000000  | 800000     | 0.006993                 | 0.000213            | 0.006575      | 0.007412      | 27973.913758        | 26300.786150 | 29647.041366 |
-| response_model   | 30.000000  | 1200000    | 0.007411                 | 0.000221            | 0.006978      | 0.007845      | 29644.509094        | 27910.039374 | 31378.978814 |
-| random_targeting | 5.000000   | 200000     | 0.000424                 | 0.000051            | 0.000324      | 0.000525      | 1696.854961         | 1295.424946  | 2098.284976  |
-| random_targeting | 10.000000  | 400000     | 0.000779                 | 0.000073            | 0.000636      | 0.000921      | 3114.144786         | 2542.312859  | 3685.976712  |
-| random_targeting | 20.000000  | 800000     | 0.001643                 | 0.000103            | 0.001442      | 0.001845      | 6573.824175         | 5768.454834  | 7379.193515  |
-| random_targeting | 30.000000  | 1200000    | 0.002531                 | 0.000125            | 0.002285      | 0.002776      | 10122.538744        | 9140.920911  | 11104.156578 |
-| s_learner        | 5.000000   | 200000     | 0.004721                 | 0.000122            | 0.004482      | 0.004960      | 18884.200638        | 17929.730830 | 19838.670446 |
-| s_learner        | 10.000000  | 400000     | 0.005884                 | 0.000171            | 0.005550      | 0.006219      | 23537.047083        | 22198.058594 | 24876.035572 |
-| s_learner        | 20.000000  | 800000     | 0.007091                 | 0.000208            | 0.006684      | 0.007499      | 28364.881081        | 26734.769406 | 29994.992756 |
-| s_learner        | 30.000000  | 1200000    | 0.007352                 | 0.000218            | 0.006925      | 0.007780      | 29409.193564        | 27699.953204 | 31118.433925 |
+| response_model   | 5.000000   | 200000     | 0.003108                 | 0.000145            | 0.002823      | 0.003393      | 12432.564588        | 11292.906665 | 13572.222511 |
+| response_model   | 10.000000  | 400000     | 0.005000                 | 0.000189            | 0.004631      | 0.005370      | 20000.855871        | 18522.492209 | 21479.219533 |
+| response_model   | 20.000000  | 800000     | 0.006656                 | 0.000214            | 0.006236      | 0.007076      | 26623.672379        | 24944.716459 | 28302.628299 |
+| response_model   | 30.000000  | 1200000    | 0.006953                 | 0.000222            | 0.006519      | 0.007387      | 27813.121109        | 26076.446192 | 29549.796025 |
+| random_targeting | 5.000000   | 200000     | 0.000424                 | 0.000052            | 0.000323      | 0.000526      | 1697.842283         | 1293.224202  | 2102.460365  |
+| random_targeting | 10.000000  | 400000     | 0.000775                 | 0.000073            | 0.000633      | 0.000917      | 3100.475167         | 2531.155798  | 3669.794536  |
+| random_targeting | 20.000000  | 800000     | 0.001395                 | 0.000102            | 0.001195      | 0.001595      | 5579.996349         | 4779.012482  | 6380.980216  |
+| random_targeting | 30.000000  | 1200000    | 0.002143                 | 0.000125            | 0.001897      | 0.002389      | 8570.333930         | 7586.502423  | 9554.165437  |
+| s_learner        | 5.000000   | 200000     | 0.004573                 | 0.000123            | 0.004332      | 0.004814      | 18293.248176        | 17329.073484 | 19257.422868 |
+| s_learner        | 10.000000  | 400000     | 0.005738                 | 0.000170            | 0.005405      | 0.006070      | 22951.307058        | 21621.873184 | 24280.740932 |
+| s_learner        | 20.000000  | 800000     | 0.006551                 | 0.000206            | 0.006148      | 0.006953      | 26202.193609        | 24590.704045 | 27813.683172 |
+| s_learner        | 30.000000  | 1200000    | 0.006845                 | 0.000216            | 0.006422      | 0.007269      | 27381.608743        | 25687.768897 | 29075.448589 |
 
 ![Confirmatory policy value](figures/confirmatory_visit_policy_value.png)
 
@@ -48,27 +48,27 @@ level, and the estimator were all locked before this sample was drawn.
 
 | policy           | reference_policy | budget_pct | n_targeted | difference_rate | standard_error_rate | difference    | ci_lower      | ci_upper      |
 | ---------------- | ---------------- | ---------- | ---------- | --------------- | ------------------- | ------------- | ------------- | ------------- |
-| random_targeting | response_model   | 5.000000   | 200000     | -0.002802       | 0.000144            | -11208.303316 | -12335.321059 | -10081.285573 |
-| s_learner        | response_model   | 5.000000   | 200000     | 0.001495        | 0.000124            | 5979.042361   | 5005.713972   | 6952.370750   |
-| random_targeting | response_model   | 10.000000  | 400000     | -0.004353       | 0.000182            | -17411.241325 | -18834.277713 | -15988.204937 |
-| s_learner        | response_model   | 10.000000  | 400000     | 0.000753        | 0.000104            | 3011.660972   | 2192.572330   | 3830.749614   |
-| random_targeting | response_model   | 20.000000  | 800000     | -0.005350       | 0.000194            | -21400.089583 | -22921.234742 | -19878.944424 |
-| s_learner        | response_model   | 20.000000  | 800000     | 0.000098        | 0.000062            | 390.967323    | -96.379592    | 878.314239    |
-| random_targeting | response_model   | 30.000000  | 1200000    | -0.004880       | 0.000188            | -19521.970350 | -20994.811423 | -18049.129276 |
-| s_learner        | response_model   | 30.000000  | 1200000    | -0.000059       | 0.000052            | -235.315530   | -644.454872   | 173.823813    |
+| random_targeting | response_model   | 5.000000   | 200000     | -0.002684       | 0.000147            | -10734.722304 | -11886.037069 | -9583.407540  |
+| s_learner        | response_model   | 5.000000   | 200000     | 0.001465        | 0.000129            | 5860.683588   | 4850.495592   | 6870.871585   |
+| random_targeting | response_model   | 10.000000  | 400000     | -0.004225       | 0.000184            | -16900.380704 | -18339.958768 | -15460.802640 |
+| s_learner        | response_model   | 10.000000  | 400000     | 0.000738        | 0.000112            | 2950.451187   | 2075.531057   | 3825.371316   |
+| random_targeting | response_model   | 20.000000  | 800000     | -0.005261       | 0.000194            | -21043.676030 | -22568.286521 | -19519.065539 |
+| s_learner        | response_model   | 20.000000  | 800000     | -0.000105       | 0.000076            | -421.478770   | -1019.078068  | 176.120527    |
+| random_targeting | response_model   | 30.000000  | 1200000    | -0.004811       | 0.000188            | -19242.787179 | -20712.870519 | -17772.703839 |
+| s_learner        | response_model   | 30.000000  | 1200000    | -0.000108       | 0.000061            | -431.512366   | -908.181981   | 45.157249     |
 
 At the pre-specified `5.00%` budget the confirmatory
 sample confirmed a positive advantage over response targeting at the pre-specified budget. The estimated difference is
-`5979.0424` incremental visit outcomes with a
+`5860.6836` incremental visit outcomes with a
 `95.0%` interval of
-`[5005.7140, 6952.3707]`.
+`[4850.4956, 6870.8716]`.
 
 ## Precision Gained
 
 | stage               | n_evaluated | difference_per_100k | standard_error_per_100k | z_statistic | ci_lower_per_100k | ci_upper_per_100k | excludes_zero | standard_error_reduction |
 | ------------------- | ----------- | ------------------- | ----------------------- | ----------- | ----------------- | ----------------- | ------------- | ------------------------ |
-| Earlier locked test | 200000      | 133.261903          | 56.814515               | 2.345561    | 21.907500         | 244.616305        | True          | 1.000000                 |
-| Confirmatory test   | 4000000     | 149.476059          | 12.415131               | 12.039829   | 125.142849        | 173.809269        | True          | 4.576232                 |
+| Earlier locked test | 200000      | 190.270928          | 55.334839               | 3.438538    | 81.816636         | 298.725220        | True          | 1.000000                 |
+| Confirmatory test   | 4000000     | 146.517090          | 12.885288               | 11.370882   | 121.262390        | 171.771790        | True          | 4.294420                 |
 
 Both stages estimate the same locked policy, so the difference between them is
 evaluation precision, not a different effect. Figures are normalized per 100,000
@@ -81,9 +81,9 @@ rather than a new answer.
 
 | policy           | benchmark_relative_auuc |
 | ---------------- | ----------------------- |
-| response_model   | 0.011798                |
-| s_learner        | 0.011639                |
-| random_targeting | 0.006630                |
+| response_model   | 0.009130                |
+| s_learner        | 0.009037                |
+| random_targeting | 0.004958                |
 
 Relative AUUC scores the whole ranking. The decision is made on the
 budget-specific paired contrast because the campaign can only treat a fixed
@@ -93,10 +93,10 @@ share of users.
 
 | stage       | model                   | fit_seconds |
 | ----------- | ----------------------- | ----------- |
-| locked_test | response_model          | 14.330793   |
-| locked_test | random_targeting        | 0.000049    |
-| locked_test | s_learner               | 10.221461   |
-| locked_test | aipw_nuisance_t_learner | 12.098502   |
+| locked_test | response_model          | 11.771896   |
+| locked_test | random_targeting        | 0.000052    |
+| locked_test | s_learner               | 9.295238    |
+| locked_test | aipw_nuisance_t_learner | 11.592130   |
 
 ## Interpretation Boundaries
 

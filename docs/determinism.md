@@ -74,14 +74,48 @@ sensitivity in `README.md`: the same 200,000-row partition returned
 protocol changed between those two runs. That spread is the reason the project
 stopped treating a 200,000-row evaluation as sufficient.
 
-## 3. Sampling is seeded in the database, not in Python
+## 3. Sampling is seeded in the database, and rows have identities
 
-`prepare_criteo_sample` and `prepare_criteo_audit_sample` use DuckDB's
-`USING SAMPLE reservoir(n) REPEATABLE (seed)`, so a sample is a pure function of
-`(source file, sample size, seed, exclusion set)`. The audit and confirmatory
-samples additionally exclude every full-row hash present in earlier samples, and
-`count_overlapping_rows` re-verifies disjointness afterwards as a separate query
-rather than trusting the construction.
+`prepare_criteo_index` materializes the source CSV once as Parquet with a
+`row_id` column equal to the row's position in the file. The scan runs with
+`threads = 1` and `preserve_insertion_order = true`, which is what makes
+`row_number()` reproducible. Every sample is then drawn from that file with
+DuckDB's `USING SAMPLE reservoir(n) REPEATABLE (seed)`, so a sample is a pure
+function of `(indexed source, sample size, seed, exclusion set)`.
+
+`count_overlapping_rows` re-verifies disjointness afterwards as a separate
+query rather than trusting the construction.
+
+### Why identity and not value
+
+An earlier version excluded rows whose hash of *all columns* appeared in a
+previous sample. That sounds equivalent and is not, because the source file
+contains duplicate rows:
+
+| Group | Rows | Treated | Control visit | Treated visit | Treatment effect |
+|---|---:|---:|---:|---:|---:|
+| Values duplicated elsewhere | 2,221,150 | 95.71% | 0.0000% | 0.0020% | +0.002 pp |
+| Values unique | 11,758,442 | 82.98% | 4.0018% | 5.9116% | +1.910 pp |
+
+The duplicated rows are almost entirely inert: no visits, no conversions, and
+overwhelmingly in the treated arm. Hash exclusion drops *every* copy as soon as
+one is drawn, so each successive sample shed more inert rows and its measured
+treatment effect drifted upward:
+
+| Sample | Exclusion | Effect under hash exclusion | Under identity exclusion |
+|---|---|---:|---:|
+| Population (13,979,592 rows) | — | +1.0342 pp | +1.0342 pp |
+| 500,000 | none | +0.9607 pp | +0.9607 pp |
+| 1,000,000 audit | 2.5M rows | +1.2241 pp (+3.5 SE) | +1.0827 pp (+0.9 SE) |
+| 4,000,000 confirmatory | 3.5M rows | +1.3199 pp (+10.5 SE) | +1.0052 pp (-1.1 SE) |
+
+The 500,000-row sample excludes nothing, so it was unaffected either way, and it
+is what first showed the other two were drifting. Under identity exclusion every
+sample is statistically indistinguishable from the population.
+
+This was a real defect: it inflated the headline effect by roughly 28% before it
+was found. `test_audit_sample_keeps_untouched_duplicates_of_used_rows` pins the
+corrected behaviour.
 
 ## Known sources of variation
 

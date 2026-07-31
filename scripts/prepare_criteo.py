@@ -15,7 +15,11 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
-from src.data.criteo import load_criteo, prepare_criteo_sample
+from src.data.criteo import (
+    load_criteo,
+    prepare_criteo_index,
+    prepare_criteo_sample,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -23,6 +27,14 @@ def parse_args() -> argparse.Namespace:
         description="Create a reproducible Criteo development sample."
     )
     parser.add_argument("--data-path", default="data/criteo-uplift-v2.1.csv.gz")
+    parser.add_argument(
+        "--index-path",
+        default="data/processed/criteo_indexed.parquet",
+        help=(
+            "Source file materialized once with a stable row_id. Built on "
+            "first use; every sample is drawn from it."
+        ),
+    )
     parser.add_argument(
         "--sample-path",
         default="data/processed/criteo_sample_500k.parquet",
@@ -35,9 +47,17 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    index_path = ROOT / args.index_path
+    if not index_path.exists() or args.force:
+        print("Indexing the source file so rows carry a stable identity...")
+    index_path = prepare_criteo_index(
+        ROOT / args.data_path,
+        index_path,
+        force=args.force,
+    )
     print(f"Creating a reservoir sample of {args.sample_size:,} rows...")
     sample_path = prepare_criteo_sample(
-        ROOT / args.data_path,
+        index_path,
         ROOT / args.sample_path,
         sample_size=args.sample_size,
         random_state=args.random_state,

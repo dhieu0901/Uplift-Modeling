@@ -1,4 +1,4 @@
 ﻿arm,policy,target_rate_pct,sample_size,expected_visit_rate_offline
-A,s_learner,5.0,581201,0.04318205015942449
-B,response_model,5.0,581201,0.04168728956920089
-H,no_campaign_holdout,0.0,117461,0.038461
+A,s_learner,5.0,601392,0.04290631204403211
+B,response_model,5.0,601392,0.04144114114692151
+H,no_campaign_holdout,0.0,126035,0.038333

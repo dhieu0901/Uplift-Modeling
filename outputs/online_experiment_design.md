@@ -10,38 +10,38 @@ each policy arm.
 ## Sample-Size Assumptions
 
 - Offline source: `outputs/tables/confirmatory_visit_test.csv` on a test population of 4,000,000 users.
-- No-campaign visit rate: `0.038461`.
-- Implied visit rates for arms A/B: `0.043182` / `0.041687`.
-- Offline A-B difference: `0.001495`.
+- No-campaign visit rate: `0.038333`.
+- Implied visit rates for arms A/B: `0.042906` / `0.041441`.
+- Offline A-B difference: `0.001465`.
 - Planning effect retains `75%` of the offline
-  difference: `0.001121`.
+  difference: `0.001099`.
 - Two-sided test, alpha `0.05`, power `80%`.
 - Buffer for attrition/logging loss: `15%`.
 
-The unbuffered sample size for each policy arm is 505,392. The
+The unbuffered sample size for each policy arm is 522,949. The
 holdout size is calculated conservatively from the response-policy versus
-no-campaign comparison: 102,140.
+no-campaign comparison: 109,595.
 
 ## Proposed Allocation
 
 | Arm | Policy              | Target rate | Users   | Offline visit rate |
 | --- | ------------------- | ----------- | ------- | ------------------ |
-| A   | s_learner           | 5%          | 581,201 | 0.043182           |
-| B   | response_model      | 5%          | 581,201 | 0.041687           |
-| H   | no_campaign_holdout | 0%          | 117,461 | 0.038461           |
+| A   | s_learner           | 5%          | 601,392 | 0.042906           |
+| B   | response_model      | 5%          | 601,392 | 0.041441           |
+| H   | no_campaign_holdout | 0%          | 126,035 | 0.038333           |
 
-Proposed total cohort: **1,279,863 users**. Each policy arm has
-581,201 users and is expected to target approximately
-29,061 / 29,061 users. The holdout contains
-117,461 users who receive no campaign during the measurement window.
+Proposed total cohort: **1,328,819 users**. Each policy arm has
+601,392 users and is expected to target approximately
+30,070 / 30,070 users. The holdout contains
+126,035 users who receive no campaign during the measurement window.
 
 ## Sensitivity Analysis by Online Effect Size
 
 | Effect retained | Difference | Users per arm | Users per arm with buffer |
 | --------------- | ---------- | ------------- | ------------------------- |
-| 100%            | 0.001495   | 285,485       | 328,308                   |
-| 75%             | 0.001121   | 505,392       | 581,201                   |
-| 50%             | 0.000747   | 1,132,326     | 1,302,175                 |
+| 100%            | 0.001465   | 295,385       | 339,693                   |
+| 75%             | 0.001099   | 522,949       | 601,392                   |
+| 50%             | 0.000733   | 1,171,729     | 1,347,489                 |
 
 The required sample size grows rapidly when the online effect is smaller than
 the offline estimate. The default design assumes 75% effect retention; if traffic
