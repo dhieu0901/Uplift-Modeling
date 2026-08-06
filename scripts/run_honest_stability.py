@@ -23,6 +23,7 @@ if hasattr(sys.stdout, "reconfigure"):
 from src.data.criteo import load_criteo, subsample_criteo
 from src.experiments.honest_uplift import run_honest_uplift_experiment
 from src.models.registry import (
+    REFERENCE_POLICIES,
     rare_outcome_model_factories,
     select_model_factories,
 )
@@ -108,10 +109,12 @@ def main() -> None:
             np.isclose(result.test_policy_values["budget_pct"], budget_pct)
         ].set_index("policy")
         metrics = result.test_metrics.set_index("policy")
+        selection = summarize_selection(result, budget_pct)
         rows.append(
             {
                 "seed": seed,
                 "champion": result.champion,
+                **selection,
                 "difference_vs_response": contrast["difference"],
                 "ci_lower": contrast["ci_lower"],
                 "ci_upper": contrast["ci_upper"],
@@ -189,6 +192,53 @@ def main() -> None:
     print(summary.to_string(index=False))
 
 
+def summarize_selection(result, budget_pct: float) -> dict:
+    """Record how close the selection was, not just who won.
+
+    A champion that changes across splits can mean two very different things:
+    the rule is unstable, or several candidates are genuinely tied and the
+    rule is picking arbitrarily among equals. Those call for different
+    responses, and the champion name alone cannot tell them apart. Recording
+    the runner-up and the margin does.
+    """
+    contrasts = result.validation_contrasts
+    ranked = contrasts[
+        np.isclose(contrasts["budget_pct"], budget_pct)
+        & contrasts["policy"].isin(
+            [name for name in result.validation_scores if name not in REFERENCE_POLICIES]
+        )
+    ].dropna(subset=["ci_lower"]).sort_values("ci_lower", ascending=False)
+
+    if ranked.empty:
+        return {}
+
+    champion_row = ranked.iloc[0]
+    runner_up = ranked.iloc[1] if len(ranked) > 1 else None
+    order = list(ranked["policy"])
+
+    return {
+        "runner_up": None if runner_up is None else str(runner_up["policy"]),
+        "selection_margin": (
+            float("nan")
+            if runner_up is None
+            else float(champion_row["ci_lower"] - runner_up["ci_lower"])
+        ),
+        "champion_selection_ci_lower": float(champion_row["ci_lower"]),
+        "runner_up_selection_ci_lower": (
+            float("nan") if runner_up is None else float(runner_up["ci_lower"])
+        ),
+        # The margin only means something next to the uncertainty in the
+        # quantity being ranked, so the champion's own interval travels with it.
+        "champion_selection_halfwidth": float(
+            (champion_row["ci_upper"] - champion_row["ci_lower"]) / 2.0
+        ),
+        "n_candidates_with_positive_bound": int((ranked["ci_lower"] > 0).sum()),
+        "s_learner_selection_rank": (
+            order.index("s_learner") + 1 if "s_learner" in order else -1
+        ),
+    }
+
+
 def _parse_strings(value: str) -> list[str]:
     values = [item.strip() for item in value.split(",") if item.strip()]
     if not values:
@@ -257,6 +307,83 @@ def plot_stability(results: pd.DataFrame, output_path: Path) -> None:
     plt.close(figure)
 
 
+def _numeric_column(frame: pd.DataFrame, name: str) -> pd.Series:
+    """Read an optional diagnostic column, empty when it was not recorded."""
+    if name not in frame.columns:
+        return pd.Series(dtype=float)
+    return pd.to_numeric(frame[name], errors="coerce").dropna()
+
+
+def describe_selection_closeness(results: pd.DataFrame) -> str:
+    """State whether a changing champion means instability or a tie.
+
+    The margin is read against the width of the champion's own selection
+    interval rather than against the effect size. A gap the estimator cannot
+    resolve means the candidates are tied; a gap it can resolve means the
+    ranking really does move between splits.
+    """
+    if "selection_margin" not in results.columns:
+        return "Selection margins were not recorded for this run."
+
+    margins = pd.to_numeric(results["selection_margin"], errors="coerce").dropna()
+    if margins.empty:
+        return "Selection margins were not recorded for this run."
+
+    modal = results["champion"].mode()
+    modal_champion = str(modal.iloc[0]) if not modal.empty else "the modal champion"
+    lost = results[results["champion"] != modal_champion]
+    halfwidths = _numeric_column(results, "champion_selection_halfwidth")
+    ranks = _numeric_column(results, "s_learner_selection_rank")
+    ranks = ranks[ranks > 0]
+
+    lines = [
+        f"- Median margin between the champion and the runner-up: "
+        f"`{margins.median():.1f}` incremental outcomes.",
+        f"- Runs where `{modal_champion}` was not selected: "
+        f"**{len(lost)} of {len(results)}**.",
+    ]
+    if not halfwidths.empty:
+        ratio = margins.median() / halfwidths.median()
+        lines.append(
+            f"- Median half-width of the champion's own selection interval: "
+            f"`{halfwidths.median():.1f}`. The margin is `{ratio:.2f}` times "
+            f"that width."
+        )
+    cleared = _numeric_column(results, "n_candidates_with_positive_bound")
+    if not cleared.empty:
+        lines.append(
+            f"- Runs in which no candidate reached a positive selection bound: "
+            f"**{int((cleared == 0).sum())} of {len(cleared)}**. The rule still "
+            f"names a champion in those runs, because it ranks candidates rather "
+            f"than requiring one to clear a bar."
+        )
+    if not ranks.empty:
+        lines.append(
+            f"- `s_learner` finished first or second in "
+            f"**{int((ranks <= 2).sum())} of {len(ranks)}** runs "
+            f"(median rank {ranks.median():.0f})."
+        )
+
+    if not halfwidths.empty and margins.median() < halfwidths.median():
+        verdict = (
+            "The gap between first and second place is smaller than the "
+            "uncertainty attached to first place itself, so the leaderboard "
+            "reorders under resampling without any candidate being measurably "
+            "better. A changing champion here reflects candidates the selection "
+            "sample cannot separate, and the frequency table should be read as "
+            "a ranking tendency rather than as evidence that one architecture "
+            "wins."
+        )
+    else:
+        verdict = (
+            "The gap between first and second place exceeds the uncertainty "
+            "attached to first place, so the changes in champion are not "
+            "explained by selection noise alone and the ranking is genuinely "
+            "sensitive to the split."
+        )
+    return "\n".join(lines) + "\n\n" + verdict
+
+
 def build_report(
     args,
     dataset_size: int,
@@ -266,6 +393,7 @@ def build_report(
     results_path: Path,
     figure_path: Path,
 ) -> str:
+    selection_note = describe_selection_closeness(results)
     return f"""# End-to-End Honest-Split Stability: Criteo {args.outcome}
 
 ## Protocol
@@ -285,6 +413,10 @@ def build_report(
 ## Champion Frequency
 
 {dataframe_to_markdown(champion_frequency)}
+
+## How Close Was Each Selection
+
+{selection_note}
 
 ## Results by Split
 

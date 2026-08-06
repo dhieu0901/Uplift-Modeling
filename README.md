@@ -179,10 +179,21 @@ Ten complete repetitions of the protocol on the 500,000-row sample:
 Mean difference +69.2 per 100,000 users (SD 60.9, range -10.8 to +171.8);
 8 of 10 point estimates positive, but only 1 of 10 intervals wholly positive.
 
-**The selection rule does not identify a single best learner.** The defensible
-claim is about the policy class: uplift targeting at a tight budget beats
-response targeting, and the S-learner is the instance that was locked before the
-confirmatory sample was drawn. These splits overlap, so they are a sensitivity
+A winner that changes across splits can mean the rule is unstable or that the
+candidates are tied, so each run also records how close the call was. The median
+gap between first and second place is 32.0 incremental outcomes, against a median
+half-width of 163.7 on the winner's own selection interval — a fifth of the
+uncertainty in the number being ranked. Two splits are decided by margins of 0.5
+and 3.3. In 3 of 10 runs no candidate reaches a positive selection bound at all,
+and the rule still names a winner, because it ranks candidates rather than
+requiring one to clear a bar.
+
+**The selection rule does not identify a single best learner**, and the margins
+say why: this sample cannot separate the candidates. The S-learner places first
+or second in 7 of 10 runs, which is a ranking tendency rather than a win. The
+defensible claim is about the policy class: uplift targeting at a tight budget
+beats response targeting, and the S-learner is the instance that was locked before
+the confirmatory sample was drawn. These splits overlap, so they are a sensitivity
 analysis rather than ten independent experiments.
 
 ## Exploratory Work
