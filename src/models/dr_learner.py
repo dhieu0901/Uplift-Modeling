@@ -12,7 +12,14 @@ from src.models.cross_fitting import cross_fitted_potential_outcomes
 
 @dataclass
 class DRLearner:
-    """Cross-fitted doubly robust pseudo-outcome regression for CATE."""
+    """Cross-fitted doubly robust pseudo-outcome regression for CATE.
+
+    Follows Kennedy, *Towards Optimal Doubly Robust Estimation of Heterogeneous
+    Causal Effects*, Electronic Journal of Statistics 17(2):3008-3049. The
+    pseudo-outcome is the same AIPW score this project uses to *evaluate*
+    policies, here regressed on X to *estimate* the effect function instead of
+    averaged to estimate its mean.
+    """
 
     effect_model: object | None = None
     outcome_model_factory: Callable[[int], object] | None = None

@@ -16,6 +16,10 @@ from src.models.base import (
 class CVTLearner:
     """Class Variable Transformation with propensity balancing.
 
+    The transformation is due to Jaskowski and Jaroszewicz, *Uplift Modeling for
+    Clinical Trial Data*, ICML 2012 Workshop on Machine Learning for Clinical
+    Data Analysis.
+
     Classical CVT uses the label Z = 1(Y = T) and uplift = 2P(Z=1|X)-1,
     which assumes balanced treatment and control groups. Criteo has a propensity
     of approximately 0.85, so the model uses inverse-propensity weights by default

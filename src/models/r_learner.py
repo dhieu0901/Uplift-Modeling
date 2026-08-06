@@ -14,6 +14,12 @@ from src.models.cross_fitting import cross_fitted_potential_outcomes
 class RLearner:
     """Cross-fitted R-learner for heterogeneous treatment effects.
 
+    Follows Nie and Wager, *Quasi-Oracle Estimation of Heterogeneous Treatment
+    Effects*, Biometrika 108(2):299-319, which builds on Robinson's partially
+    linear decomposition ``Y - m(X) = (T - e) * tau(X) + noise``. Dividing by
+    the treatment residual turns that into a regression target, and weighting
+    by its square cancels the blow-up when ``T`` lands close to ``e``.
+
     In the randomized Criteo experiment the treatment propensity is constant.
     Cross-fitted arm-specific outcome models estimate the marginal outcome
     nuisance m(x), and the final regression minimizes the R-loss.

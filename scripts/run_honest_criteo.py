@@ -252,9 +252,9 @@ def build_report(
         ascending=False,
         na_position="last",
     )
-    # The verdict must describe the champion. Taking the first row instead
-    # reported whichever policy the table happened to list first -- in practice
-    # the random baseline -- and so stated the opposite conclusion.
+    # The verdict describes the champion. The contrast table lists the
+    # reference policies first, so it must be filtered by name rather than
+    # read positionally.
     primary_contrast = result.test_contrasts[
         np.isclose(result.test_contrasts["budget_pct"], primary_budget_pct)
         & (result.test_contrasts["policy"] == result.champion)

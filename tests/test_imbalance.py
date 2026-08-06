@@ -79,8 +79,8 @@ def test_undersampled_cvt_reports_scores_on_the_sampled_scale():
     assert model.negative_keep_rates_ == (1 / 9, 1 / 9)
     assert np.isfinite(score).all()
     # The wrapper returns the inner CVT score untouched. Dividing by the
-    # undersampling factor, as an earlier version did, is a positive constant
-    # rescaling: it changes no ranking and no policy, so it only implied a
-    # calibration that was never performed. CVT estimates mu1 - mu0 as a single
-    # quantity, and inverting case-control sampling needs each arm separately.
+    # undersampling factor would be a positive constant rescaling: it changes
+    # no ranking and no policy, so it would only imply a calibration that was
+    # never performed. CVT estimates mu1 - mu0 as a single quantity, and
+    # inverting case-control sampling needs each arm separately.
     np.testing.assert_allclose(score, model.learner.predict_uplift(X))

@@ -274,13 +274,12 @@ def build_report(
 
 ## Why This Stage Exists
 
-The earlier locked test estimated a positive but inconclusive advantage for
-`{args.champion}` at the `{100.0 * args.primary_budget:.2f}%` budget. That
-interval was wide because the test partition held only a fifth of a
-one-million-row audit, not because the effect was known to be zero. The source
-experiment has 13,979,592 randomized rows, so the cheapest way to sharpen the
-answer is to spend unused rows on evaluation rather than to re-argue the same
-numbers.
+The earlier locked test evaluated `{args.champion}` at the
+`{100.0 * args.primary_budget:.2f}%` budget on a fifth of a one-million-row
+audit. An evaluation that size is sensitive enough to implementation detail that
+a single reading of it is thin ground for a decision. The source experiment has
+13,979,592 randomized rows, so the cheapest way to sharpen the answer is to
+spend unused rows on evaluation rather than to re-argue the same numbers.
 
 Nothing is selected here. The champion, the operating budget, the confidence
 level, and the estimator were all locked before this sample was drawn.

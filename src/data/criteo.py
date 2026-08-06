@@ -22,13 +22,13 @@ CRITEO_OUTCOME_COLUMNS = ["visit", "conversion"]
 #: Position of a row in the source file. Every sample carries it so that samples
 #: can be made disjoint by identity instead of by value.
 #:
-#: Excluding by a hash of the row's values looks equivalent but is not: the
-#: source file contains 2,221,150 rows whose values duplicate another row, and
+#: Excluding by a hash of the row's values looks equivalent but is not. The
+#: source file holds 2,221,150 rows whose values duplicate another row, and
 #: those duplicates are almost entirely non-responders (a 0.002pp treatment
-#: effect, against 1.910pp among unique rows). Hash exclusion drops *every*
-#: copy as soon as one is drawn, so later samples lose the inert rows and their
-#: measured treatment effect inflates -- by 28% in the four-million-row sample
-#: built that way. Identity exclusion removes exactly the rows already used.
+#: effect, against 1.910pp among unique rows). A value rule drops *every* copy
+#: as soon as one is drawn, so later samples lose those inert rows and their
+#: measured treatment effect reads high. Identity removes exactly the rows
+#: already spent.
 CRITEO_ROW_ID = "row_id"
 
 

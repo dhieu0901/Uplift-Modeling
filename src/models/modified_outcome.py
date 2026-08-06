@@ -13,9 +13,18 @@ from sklearn.preprocessing import StandardScaler
 class ModifiedOutcomeModel:
     """Transformed-outcome learner for randomized treatment.
 
+    The transformation appears in Athey and Imbens, *Recursive Partitioning for
+    Heterogeneous Causal Effects*, PNAS 113(27):7353-7360.
+
     The regression target is Y(T-e)/(e(1-e)). In a randomized experiment where
     propensity e is independent of X, the conditional expectation of this target
     is the treatment effect.
+
+    Ridge rather than gradient boosting is deliberate. At e = 0.85 the target
+    takes only three values: -6.67 for a responding control, +1.18 for a
+    responding treated row, and exactly 0 for the ~95% who do not respond. A
+    flexible learner fits those spikes; a linear model constrained by an L2
+    penalty cannot.
     """
 
     model: object | None = None

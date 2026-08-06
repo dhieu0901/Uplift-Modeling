@@ -72,10 +72,10 @@ def test_audit_sample_excludes_prior_rows_by_identity(tmp_path: Path):
 def test_audit_sample_keeps_untouched_duplicates_of_used_rows(tmp_path: Path):
     """A row is spent by being drawn, not by resembling something drawn.
 
-    The source file duplicates every record, so excluding by value would drop
-    both copies as soon as one is used. In the real dataset those duplicates
-    are overwhelmingly non-responders, and removing them inflated the measured
-    treatment effect by 28%. This pins the identity-based behaviour.
+    This fixture duplicates every record, so a value-based rule would drop both
+    copies as soon as one is used. In the real dataset those duplicates are
+    overwhelmingly non-responders, so losing the untouched ones would bias the
+    measured treatment effect upward.
     """
     frame = pd.concat([_benchmark_frame(50), _benchmark_frame(50)], ignore_index=True)
     raw_path = _write_source(tmp_path, frame)
