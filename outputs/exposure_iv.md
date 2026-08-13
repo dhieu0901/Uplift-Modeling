@@ -6,8 +6,8 @@
 this report is the reason in numbers rather than in argument: it reports both
 what the column appears to show and what it can legitimately identify.
 
-The question the column invites — *does someone who sees the ad and then acts
-show the campaign working?* — is a real one. It is answerable, just not by
+The question the column invites - *does someone who sees the ad and then acts
+show the campaign working?* - is a real one. It is answerable, just not by
 comparing the exposed group against the control arm.
 
 ## Protocol
@@ -41,7 +41,7 @@ The mechanism is that an ad renders only while someone is already browsing, so
 | Quantity | Estimate | 95% interval |
 |---|---:|---:|
 | Effect of being assigned, everyone | `+0.9607 pp` | `[+0.8070, +1.1144]` |
-| Share of assigned users whose ad rendered | `3.6052%` | — |
+| Share of assigned users whose ad rendered | `3.6052%` | - |
 | **Effect among users whose ad renders** | **`+26.6466 pp`** | `[+22.3368, +30.9565]` |
 
 Splitting the apparent gap:
@@ -73,7 +73,7 @@ The mechanism is that an ad renders only while someone is already browsing, so
 | Quantity | Estimate | 95% interval |
 |---|---:|---:|
 | Effect of being assigned, everyone | `+0.0986 pp` | `[+0.0617, +0.1354]` |
-| Share of assigned users whose ad rendered | `3.6052%` | — |
+| Share of assigned users whose ad rendered | `3.6052%` | - |
 | **Effect among users whose ad renders** | **`+2.7339 pp`** | `[+1.7137, +3.7540]` |
 
 Splitting the apparent gap:

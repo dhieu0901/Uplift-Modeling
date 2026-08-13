@@ -166,7 +166,7 @@ def _section(analysis: ExposureAnalysis) -> str:
         if broken
         else (
             "Users assigned but never exposed do not sit below the control arm "
-            "here, so this particular symptom is absent — the column is still "
+            "here, so this particular symptom is absent - the column is still "
             "decided after assignment and still cannot be used for targeting."
         )
     )
@@ -182,7 +182,7 @@ The mechanism is that an ad renders only while someone is already browsing, so
 | Quantity | Estimate | 95% interval |
 |---|---:|---:|
 | Effect of being assigned, everyone | `{100.0 * itt.value:+.4f} pp` | {_interval(itt)} |
-| Share of assigned users whose ad rendered | `{100.0 * analysis.exposure_rate.value:.4f}%` | — |
+| Share of assigned users whose ad rendered | `{100.0 * analysis.exposure_rate.value:.4f}%` | - |
 | **Effect among users whose ad renders** | **`{100.0 * cace.value:+.4f} pp`** | {_interval(cace)} |
 
 Splitting the apparent gap:
@@ -215,8 +215,8 @@ def build_report(
 this report is the reason in numbers rather than in argument: it reports both
 what the column appears to show and what it can legitimately identify.
 
-The question the column invites — *does someone who sees the ad and then acts
-show the campaign working?* — is a real one. It is answerable, just not by
+The question the column invites - *does someone who sees the ad and then acts
+show the campaign working?* - is a real one. It is answerable, just not by
 comparing the exposed group against the control arm.
 
 ## Protocol

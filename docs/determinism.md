@@ -43,7 +43,7 @@ it, and two runs sharing a learner would not be comparable.
 
 Seed choice is not a cosmetic detail at this sample size. On the same 200,000-row
 partition, two seeding conventions returned `+168.5 [-53.0, 390.0]` and
-`+266.5 [43.8, 489.2]` — one spanning zero and one not — with nothing about the
+`+266.5 [43.8, 489.2]` - one spanning zero and one not - with nothing about the
 data or the protocol different between them. A 200,000-row evaluation cannot
 resolve an effect this size, which is why the four-million-row confirmatory
 sample exists.

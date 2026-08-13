@@ -234,7 +234,7 @@ def _adjusted_verdict(survivors: list[str], champion: str) -> str:
     others = ", ".join(f"`{name}`" for name in survivors if name != champion)
     if champion in survivors:
         return (
-            f"`{champion}` still clears zero, and so does {others} — the "
+            f"`{champion}` still clears zero, and so does {others} - the "
             "correction narrows the field without isolating one candidate."
         )
     return (
