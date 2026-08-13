@@ -20,13 +20,26 @@
 
 ## Out-of-Sample Development Selection
 
-| policy               | budget_pct | n_targeted | incremental_outcome_rate | standard_error_rate | ci_lower_rate | ci_upper_rate | incremental_outcome | ci_lower   | ci_upper   | benchmark_relative_auuc | difference_vs_response | difference_ci_lower | difference_ci_upper |
-| -------------------- | ---------- | ---------- | ------------------------ | ------------------- | ------------- | ------------- | ------------------- | ---------- | ---------- | ----------------------- | ---------------------- | ------------------- | ------------------- |
-| undersampled_t_lr_k1 | 5.000000   | 40000      | 0.000897                 | 0.000119            | 0.000664      | 0.001131      | 717.754769          | 531.020033 | 904.489506 | 0.001177                | 18.590258              | -68.482702          | 105.663219          |
-| random_targeting     | 5.000000   | 40000      | 0.000074                 | 0.000029            | 0.000016      | 0.000132      | 59.297509           | 13.082656  | 105.512362 | 0.000620                | -639.867002            | -836.954913         | -442.779091         |
-| response_model       | 5.000000   | 40000      | 0.000874                 | 0.000126            | 0.000626      | 0.001122      | 699.164511          | 500.825067 | 897.503954 | 0.001189                | nan                    | nan                 | nan                 |
+| policy               | budget_pct | n_targeted | incremental_outcome_rate | standard_error_rate | ci_lower_rate | ci_upper_rate | incremental_outcome | ci_lower   | ci_upper   | benchmark_relative_auuc | difference_vs_response | difference_ci_lower | difference_ci_upper | ci_lower_adjusted |
+| -------------------- | ---------- | ---------- | ------------------------ | ------------------- | ------------- | ------------- | ------------------- | ---------- | ---------- | ----------------------- | ---------------------- | ------------------- | ------------------- | ----------------- |
+| undersampled_t_lr_k5 | 5.000000   | 40000      | 0.000800                 | 0.000115            | 0.000573      | 0.001026      | 639.831175          | 458.759631 | 820.902718 | 0.001087                | -59.333336             | -162.254495         | 43.587822           | -162.254495       |
+| random_targeting     | 5.000000   | 40000      | 0.000074                 | 0.000029            | 0.000016      | 0.000132      | 59.297509           | 13.082656  | 105.512362 | 0.000620                | -639.867002            | -836.954913         | -442.779091         | nan               |
+| response_model       | 5.000000   | 40000      | 0.000874                 | 0.000126            | 0.000626      | 0.001122      | 699.164511          | 500.825067 | 897.503954 | 0.001189                | nan                    | nan                 | nan                 | nan               |
 
-Selected champion: **undersampled_t_lr_k1**.
+Selected champion: **undersampled_t_lr_k5**.
+
+`ci_lower_adjusted` re-derives each bound at
+`95.00%`, which spreads the same
+`5%` error rate across the
+`1` candidates. The unadjusted column answers "is this candidate
+above response targeting"; the adjusted one answers "does any candidate in this
+table stand above it", which is the question the selection rule actually asks by
+keeping the largest bound. No candidate clears zero once the table is read as a whole, so the champion is the best of a set that the selection sample cannot separate from response targeting.
+
+Selection still uses the unadjusted rule fixed before the data was seen.
+Adjusting penalizes wide intervals more than narrow ones and so can reorder the
+table, and switching to it here would be choosing a rule after seeing the
+result.
 
 ## Locked-Test Policy Value
 
@@ -40,10 +53,10 @@ Selected champion: **undersampled_t_lr_k1**.
 | random_targeting     | 10.000000  | 20000      | -0.000014                | 0.000100            | -0.000211     | 0.000183      | -2.807603           | -42.148911 | 36.533705  |
 | random_targeting     | 20.000000  | 40000      | 0.000070                 | 0.000128            | -0.000181     | 0.000321      | 13.954955           | -36.194289 | 64.104200  |
 | random_targeting     | 30.000000  | 60000      | -0.000024                | 0.000169            | -0.000355     | 0.000306      | -4.887022           | -70.954506 | 61.180463  |
-| undersampled_t_lr_k1 | 5.000000   | 10000      | 0.000851                 | 0.000255            | 0.000351      | 0.001352      | 170.254713          | 70.107397  | 270.402030 |
-| undersampled_t_lr_k1 | 10.000000  | 20000      | 0.001060                 | 0.000266            | 0.000538      | 0.001582      | 211.940063          | 107.524837 | 316.355288 |
-| undersampled_t_lr_k1 | 20.000000  | 40000      | 0.001154                 | 0.000278            | 0.000609      | 0.001698      | 230.736521          | 121.843041 | 339.630002 |
-| undersampled_t_lr_k1 | 30.000000  | 60000      | 0.001154                 | 0.000280            | 0.000605      | 0.001703      | 230.783055          | 120.913433 | 340.652678 |
+| undersampled_t_lr_k5 | 5.000000   | 10000      | 0.000964                 | 0.000240            | 0.000494      | 0.001434      | 192.776579          | 98.719695  | 286.833463 |
+| undersampled_t_lr_k5 | 10.000000  | 20000      | 0.001128                 | 0.000258            | 0.000623      | 0.001634      | 225.699667          | 124.508194 | 326.891141 |
+| undersampled_t_lr_k5 | 20.000000  | 40000      | 0.001224                 | 0.000273            | 0.000689      | 0.001758      | 244.709540          | 137.740649 | 351.678432 |
+| undersampled_t_lr_k5 | 30.000000  | 60000      | 0.001195                 | 0.000280            | 0.000647      | 0.001743      | 239.006063          | 129.355158 | 348.656969 |
 
 ![Locked-test policy value](figures/audit_conversion_policy_value.png)
 
@@ -52,25 +65,25 @@ Selected champion: **undersampled_t_lr_k1**.
 | policy               | reference_policy | budget_pct | n_targeted | difference_rate | standard_error_rate | difference  | ci_lower    | ci_upper    |
 | -------------------- | ---------------- | ---------- | ---------- | --------------- | ------------------- | ----------- | ----------- | ----------- |
 | random_targeting     | response_model   | 5.000000   | 10000      | -0.000976       | 0.000268            | -195.140943 | -300.060632 | -90.221254  |
-| undersampled_t_lr_k1 | response_model   | 5.000000   | 10000      | -0.000112       | 0.000109            | -22.313154  | -64.873446  | 20.247138   |
+| undersampled_t_lr_k5 | response_model   | 5.000000   | 10000      | 0.000001        | 0.000132            | 0.208711    | -51.520892  | 51.938315   |
 | random_targeting     | response_model   | 10.000000  | 20000      | -0.001153       | 0.000268            | -230.576072 | -335.718788 | -125.433357 |
-| undersampled_t_lr_k1 | response_model   | 10.000000  | 20000      | -0.000079       | 0.000107            | -15.828407  | -57.959254  | 26.302440   |
+| undersampled_t_lr_k5 | response_model   | 10.000000  | 20000      | -0.000010       | 0.000127            | -2.068802   | -51.727496  | 47.589891   |
 | random_targeting     | response_model   | 20.000000  | 40000      | -0.001128       | 0.000262            | -225.552607 | -328.415173 | -122.690042 |
-| undersampled_t_lr_k1 | response_model   | 20.000000  | 40000      | -0.000044       | 0.000090            | -8.771041   | -44.199806  | 26.657724   |
+| undersampled_t_lr_k5 | response_model   | 20.000000  | 40000      | 0.000026        | 0.000105            | 5.201978    | -35.929175  | 46.333130   |
 | random_targeting     | response_model   | 30.000000  | 60000      | -0.001219       | 0.000246            | -243.756891 | -340.248024 | -147.265759 |
-| undersampled_t_lr_k1 | response_model   | 30.000000  | 60000      | -0.000040       | 0.000090            | -8.086814   | -43.407088  | 27.233459   |
+| undersampled_t_lr_k5 | response_model   | 30.000000  | 60000      | 0.000001        | 0.000093            | 0.136194    | -36.150568  | 36.422956   |
 
 At the pre-specified `5.00%` budget, the locked test
-was inconclusive relative to response targeting. The estimated difference is `-22.3132`
+was inconclusive relative to response targeting. The estimated difference is `0.2087`
 incremental conversion outcomes with a confidence interval of
-`[-64.8734, 20.2471]`.
+`[-51.5209, 51.9383]`.
 
 ## Ranking Metrics
 
 | policy               | benchmark_relative_auuc |
 | -------------------- | ----------------------- |
 | response_model       | 0.001205                |
-| undersampled_t_lr_k1 | 0.001115                |
+| undersampled_t_lr_k5 | 0.001203                |
 | random_targeting     | 0.000567                |
 
 AUUC is secondary. The decision is based on the budget-specific AIPW policy
@@ -80,22 +93,22 @@ contrast because the campaign has a fixed operating budget.
 
 | stage            | model                   | fit_seconds |
 | ---------------- | ----------------------- | ----------- |
-| selection_fold_1 | random_targeting        | 0.000062    |
-| selection_fold_1 | response_model          | 10.287219   |
-| selection_fold_1 | undersampled_t_lr_k1    | 1.915795    |
-| selection_fold_1 | aipw_nuisance_t_learner | 9.564255    |
-| selection_fold_2 | random_targeting        | 0.000034    |
-| selection_fold_2 | response_model          | 5.831816    |
-| selection_fold_2 | undersampled_t_lr_k1    | 1.919052    |
-| selection_fold_2 | aipw_nuisance_t_learner | 9.763573    |
-| selection_fold_3 | random_targeting        | 0.000032    |
-| selection_fold_3 | response_model          | 6.090716    |
-| selection_fold_3 | undersampled_t_lr_k1    | 1.805453    |
-| selection_fold_3 | aipw_nuisance_t_learner | 9.614760    |
-| locked_test      | response_model          | 7.406766    |
-| locked_test      | random_targeting        | 0.000036    |
-| locked_test      | undersampled_t_lr_k1    | 2.612611    |
-| locked_test      | aipw_nuisance_t_learner | 11.399049   |
+| selection_fold_1 | random_targeting        | 0.000055    |
+| selection_fold_1 | response_model          | 6.637731    |
+| selection_fold_1 | undersampled_t_lr_k5    | 0.307006    |
+| selection_fold_1 | aipw_nuisance_t_learner | 4.407537    |
+| selection_fold_2 | random_targeting        | 0.000035    |
+| selection_fold_2 | response_model          | 3.113299    |
+| selection_fold_2 | undersampled_t_lr_k5    | 0.340488    |
+| selection_fold_2 | aipw_nuisance_t_learner | 4.727665    |
+| selection_fold_3 | random_targeting        | 0.000025    |
+| selection_fold_3 | response_model          | 3.372995    |
+| selection_fold_3 | undersampled_t_lr_k5    | 0.311565    |
+| selection_fold_3 | aipw_nuisance_t_learner | 4.747468    |
+| locked_test      | response_model          | 4.423379    |
+| locked_test      | random_targeting        | 0.000035    |
+| locked_test      | undersampled_t_lr_k5    | 0.534204    |
+| locked_test      | aipw_nuisance_t_learner | 5.967717    |
 
 ## Statistical Scope
 

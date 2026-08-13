@@ -21,7 +21,6 @@ Every figure below is backed by a tracked file in [outputs/](outputs/).
 | Which model | Treat the S-learner as one acceptable instance, not the proven best | It wins 8 of 10 repeated splits and never leaves the top two, but no candidate is measurably better than the one below it |
 | Budget | Keep it tight | +47% at 5%, +15% at 10%, no measurable advantage at 20% or 30% |
 | Conversion | Keep response targeting | No interval excludes zero at any budget - no case for switching either way |
-| Economics | No ROI claim | Outcome value and contact cost were never available |
 | Next step | Run the randomized test in [online_experiment_design.md](outputs/online_experiment_design.md) | Offline evidence bounds what a live campaign might do; it does not replace it |
 
 ## The Problem
@@ -74,20 +73,16 @@ Four samples, separated by row identity rather than by value
 | Sample | Rows | Measured effect | From population | Role |
 |---|---:|---:|---:|---|
 | Development | 500,000 | +0.9607 pp | -0.94 SE | Exposure diagnostics, semi-synthetic covariates |
-| Conversion development | 2,000,000 | +1.1257 pp | +2.38 SE | Rare-outcome sweep and calibration |
+| Conversion development | 2,000,000 | +1.0200 pp | -0.37 SE | Rare-outcome sweep and calibration |
 | Audit | 1,000,000 | +1.0827 pp | +0.89 SE | Model selection, stability, one internal locked test |
 | **Confirmatory** | **4,000,000** | **+1.0052 pp** | **-1.06 SE** | **Primary evidence, opened once** |
 
-Three of the four land within about one standard error of the population. The
-conversion development sample sits at +2.4, which is ordinary as the largest of
-four draws but is why the column is printed rather than summarised.
-
-Five of the six pairs share no rows. The exception is the two development
-samples, which share 71,193 - neither was drawn to exclude the other, so they
-overlap at the rate two independent draws of those sizes would. Nothing reported
-here compares them, and every sample that a result depends on being separate is
-verified separate: the confirmatory sample shares no row with any of the other
-three, and the audit sample that chose the model shares none with it.
+All four land within about one standard error of the population, and all six
+pairs share no rows. Each sample is drawn from the indexed source with every row
+already spent by an earlier sample removed first, so separation is a property of
+how the samples were built rather than of how they happened to land. The
+distance column is printed rather than summarised because it is the check that
+would show a draw going wrong.
 
 Identity is what makes that verifiable. The source holds 2,221,150 rows whose
 values duplicate another row, and they are almost entirely inert (+0.002 pp
@@ -183,13 +178,17 @@ budget-specific contrast.
 At a 0.29% base rate, negative undersampling was swept over factors 1 to 200 for
 T- and CVT-based logistic learners, each with case-control prior correction
 ([rare_conversion_development.md](outputs/rare_conversion_development.md)).
-Selection chose **factor 1** - no undersampling at all, which is itself the
-answer to whether undersampling helps here.
+Selection chose **factor 5**. The top four are the T family at factors 5, 10, 1,
+and 25, their intervals all span zero and overlap each other heavily, and every
+candidate that undersamples hard lands near the bottom in both families. So the
+sweep says light undersampling beats heavy and says nothing about which light
+factor to prefer. No candidate reaches a positive lower bound against response
+targeting on this sample.
 
 On the separate audit test
 ([audit_conversion_evaluation.md](outputs/audit_conversion_evaluation.md)) the
-selected candidate trails at every budget and no interval excludes zero (at 5%:
--22.3 conversions, [-64.9, 20.2]). Response
+selected candidate is level with response targeting at every budget and no
+interval excludes zero (at 5%: +0.2 conversions, [-51.5, 51.9]). Response
 targeting stays because nothing justifies changing it, not because uplift was
 shown to be worse. This sample cannot separate the two.
 
@@ -238,9 +237,11 @@ headline. Each is a single script and a single report.
   confirms as the best of the eight (91.7% of oracle value). One draw, so this
   says the rule is not systematically broken, not that it is reliable.
 - **Calibration** ([conversion_uplift_calibration.md](outputs/conversion_uplift_calibration.md)) -
-  isotonic calibration made magnitude errors on the selected model *worse*
-  (slope 1.140 to 0.783). Fitting a monotone correction on ~1,160 conversions is
-  fragile. Not recommended.
+  isotonic calibration pulls the selected model's slope toward 1 (0.794 to 0.828)
+  and cuts its worst-bin error, but raises mean absolute error slightly. On the
+  runner-up it makes every metric worse, turning a slope of 1.015 into 0.800.
+  Fitting a monotone correction on ~1,160 conversions gives a result that depends
+  on which model it is fitted to, which is the reason not to rely on it.
 - **Online design** ([online_experiment_design.md](outputs/online_experiment_design.md)) -
   three arms, 1,328,819 users, 80% power, randomized before ranking so the
   analysis is intention-to-treat rather than a comparison of two selected subsets.
@@ -260,7 +261,6 @@ headline. Each is a single script and a single report.
   learners *at that configuration* rather than between the learners as such.
 - The exposure estimate assumes assignment moves the outcome only through the
   ad rendering. Reasonable for display advertising, but not testable here.
-- Offline evidence is not production impact.
 
 ## Repository
 
@@ -303,18 +303,30 @@ Python 3.11 or 3.12. Place the Criteo dataset at `data/criteo-uplift-v2.1.csv.gz
 ```powershell
 python -m pip install -r requirements.lock.txt
 
-# Build samples. The first call indexes the source file (~1 min) and every
-# later sample is drawn from that index.
+# Build samples, in this order. The first call indexes the source file (~1 min)
+# and every later sample is drawn from that index, excluding the rows every
+# earlier sample already spent.
 python scripts\prepare_criteo.py --sample-size 500000 `
   --sample-path data\processed\criteo_sample_500k.parquet --random-state 42
+
+# Reserves two million rows so the audit and confirmatory samples are drawn
+# around them. Nothing is fitted on this file; the conversion development sample
+# is drawn last, from what is left, and so cannot be reserved against itself.
 python scripts\prepare_criteo.py --sample-size 2000000 `
-  --sample-path data\processed\criteo_sample_2m.parquet --random-state 42
+  --sample-path data\processed\criteo_reserved_2m.parquet --random-state 42
+
 python scripts\prepare_audit_sample.py
 python scripts\prepare_audit_sample.py `
-  --excluded-paths "data/processed/criteo_sample_500k.parquet,data/processed/criteo_sample_2m.parquet,data/processed/criteo_audit_1m.parquet" `
+  --excluded-paths "data/processed/criteo_sample_500k.parquet,data/processed/criteo_reserved_2m.parquet,data/processed/criteo_audit_1m.parquet" `
   --output-path data\processed\criteo_confirm_4m.parquet `
   --sample-size 4000000 --random-state 20260730 `
   --report-path outputs\confirmatory_sample.md
+
+python scripts\prepare_audit_sample.py `
+  --excluded-paths "data/processed/criteo_sample_500k.parquet,data/processed/criteo_audit_1m.parquet,data/processed/criteo_confirm_4m.parquet" `
+  --output-path data\processed\criteo_sample_2m.parquet `
+  --sample-size 2000000 --random-state 42 `
+  --report-path outputs\conversion_development_sample.md
 
 # Visit: select, then confirm
 python scripts\run_honest_criteo.py `
@@ -338,11 +350,41 @@ python scripts\run_exposure_iv.py
 
 # Measure the population and every sample, including which pairs share rows.
 python scripts\report_sample_provenance.py
+
+# Conversion: sweep the undersampling factor, then evaluate the one it chose.
+# The second command is locked to that factor, so run the sweep first and read
+# its champion rather than copying the factor below.
+python scripts\run_honest_criteo.py `
+  --sample-path data\processed\criteo_sample_2m.parquet `
+  --outcome conversion --models response_model --selection-folds 3 `
+  --undersampling-factors 1,5,10,25,50,100,200 `
+  --report-path outputs\rare_conversion_development.md `
+  --validation-path outputs\tables\rare_conversion_selection.csv `
+  --test-path outputs\tables\rare_conversion_internal_holdout.csv `
+  --contrast-path outputs\tables\rare_conversion_internal_contrasts.csv `
+  --figure-path outputs\figures\rare_conversion_development.png
+python scripts\run_honest_criteo.py `
+  --sample-path data\processed\criteo_audit_1m.parquet `
+  --outcome conversion --models response_model --selection-folds 3 `
+  --undersampling-factors 5 --undersampling-families t --random-state 777 `
+  --report-path outputs\audit_conversion_evaluation.md `
+  --validation-path outputs\tables\audit_conversion_selection.csv `
+  --test-path outputs\tables\audit_conversion_test.csv `
+  --contrast-path outputs\tables\audit_conversion_contrasts.csv `
+  --figure-path outputs\figures\audit_conversion_policy_value.png
+
+python scripts\analyze_uplift_calibration.py `
+  --models "undersampled_t_lr_k1,undersampled_t_lr_k5" `
+  --undersampling-factors "1,5" --undersampling-families t
+python scripts\run_semisynthetic_benchmark.py
+python scripts\design_online_experiment.py `
+  --input-path outputs\tables\confirmatory_visit_test.csv `
+  --policy-a s_learner --policy-b response_model `
+  --budget-pct 5.0 --no-campaign-rate 0.038333
 ```
 
-The conversion, calibration, semi-synthetic, and online-design commands follow
-the same shape; each script's `--help` lists its arguments, and the protocol
-block at the top of every report in `outputs/` records the exact settings used.
+The protocol block at the top of every report in `outputs/` records the exact
+settings that produced it, and each script's `--help` lists its arguments.
 
 ## Quality Gates
 

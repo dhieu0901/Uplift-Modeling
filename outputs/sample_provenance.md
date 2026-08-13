@@ -24,7 +24,7 @@ taking them on trust.
 | ---------------------- | ----------------------------------------------------------------- | -------- | -------------- | ---------- | --------------- | ------------------ | ------------------ | --------------- | ----------------- | --------------- |
 | Population             | D:/code/Vinsmart Future/data/processed/criteo_indexed.parquet     | 13979592 | 0.850000       | 0.046992   | 0.002917        | 3.820096           | 4.854336           | 1.034240        | 0.014632          | 0.000000        |
 | Development            | D:/code/Vinsmart Future/data/processed/criteo_sample_500k.parquet | 500000   | 0.850104       | 0.047594   | 0.002946        | 3.942734           | 4.903400           | 0.960666        | 0.078424          | -0.938161       |
-| Conversion development | D:/code/Vinsmart Future/data/processed/criteo_sample_2m.parquet   | 2000000  | 0.849934       | 0.047111   | 0.002914        | 3.754336           | 4.880029           | 1.125693        | 0.038432          | 2.379618        |
+| Conversion development | D:/code/Vinsmart Future/data/processed/criteo_sample_2m.parquet   | 2000000  | 0.849625       | 0.047087   | 0.002907        | 3.842049           | 4.862089           | 1.020040        | 0.038738          | -0.366566       |
 | Audit                  | D:/code/Vinsmart Future/data/processed/criteo_audit_1m.parquet    | 1000000  | 0.850017       | 0.047021   | 0.002919        | 3.781762           | 4.864491           | 1.082729        | 0.054503          | 0.889656        |
 | Confirmatory           | D:/code/Vinsmart Future/data/processed/criteo_confirm_4m.parquet  | 4000000  | 0.850285       | 0.046880   | 0.002906        | 3.833283           | 4.838525           | 1.005241        | 0.027403          | -1.058225       |
 
@@ -39,7 +39,7 @@ everyone moves the visit rate from `3.820%` to
 
 The samples are drawn by reservoir sampling on `row_id`, which does not look at
 any column, so each should reproduce the population up to sampling noise. The
-furthest is `Conversion development` at `+2.38` standard
+furthest is `Confirmatory` at `-1.06` standard
 errors. That is the check on the identity-based exclusion rule: excluding spent
 rows by value instead would have shed the inert duplicate rows described in
 `docs/determinism.md` and pushed the later samples' effects upward.
@@ -52,14 +52,14 @@ pairs a result happens to depend on.
 
 | left                   | right                  | overlapping_rows | disjoint |
 | ---------------------- | ---------------------- | ---------------- | -------- |
-| Development            | Conversion development | 71193            | False    |
+| Development            | Conversion development | 0                | True     |
 | Development            | Audit                  | 0                | True     |
 | Development            | Confirmatory           | 0                | True     |
 | Conversion development | Audit                  | 0                | True     |
 | Conversion development | Confirmatory           | 0                | True     |
 | Audit                  | Confirmatory           | 0                | True     |
 
-Not every pair is disjoint: `Development` and `Conversion development` share `71,193` rows. Samples are only made disjoint from the samples they are drawn to avoid, and a pair that was never constrained overlaps at the rate two independent draws of that size would. This is worth stating plainly rather than rounding to "disjoint samples": any result that compares these two would be reusing rows, even though none of the results reported here does.
+Every pair is disjoint, so no row contributes to two of these samples.
 
 ## Reproducible Outputs
 

@@ -487,23 +487,23 @@ Bin 1 contains the group with the highest raw scores. The confidence interval is
 a normal approximation for the difference between treatment and control rates
 within each bin. All bins are stored at `{bins_relative}`.
 
-## Threshold Policy Under Assumed Unit Economics
+## Break-Even Targeting at a Given Value Ratio
 
-> **These currency figures are a worked example, not a finding.** The outcome
-> value and the cost per contact below are command-line placeholders, not
-> measured business inputs. Nothing here supports a revenue or ROI claim; the
-> section exists only to show how a calibrated score would be turned into a
-> break-even decision rule once real unit economics are available.
+A calibrated score is on the outcome scale, so it can be compared against a
+threshold instead of a rank. The threshold depends only on the ratio of what an
+incremental {args.outcome} is worth to what a contact costs, which is why the
+two enter as arguments: change the ratio and the section re-derives the rule.
 
-- Assumed value of one incremental {args.outcome}: `{args.outcome_value:.2f}`.
-- Assumed cost per targeting action: `{args.treatment_cost:.2f}`.
-- Implied break-even uplift threshold: `{break_even_threshold:.6f}`.
+- Value of one incremental {args.outcome}: `{args.outcome_value:.2f}`.
+- Cost per targeting action: `{args.treatment_cost:.2f}`.
+- Break-even uplift threshold: `{break_even_threshold:.6f}`.
 
 {dataframe_to_markdown(threshold_table)}
 
 Only `calibrated` rows can carry an absolute interpretation, because a raw score
-is not on the probability scale. While calibration stability is unproven, the
-fixed 5% budget remains the safer operating rule for the online experiment.
+is not on the probability scale. The fixed 5% budget remains the operating rule
+for the online experiment, because a threshold rule moves the number of users
+contacted with the score distribution while a budget rule does not.
 
 ## Runtime
 

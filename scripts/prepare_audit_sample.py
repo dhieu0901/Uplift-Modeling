@@ -39,7 +39,14 @@ def parse_args() -> argparse.Namespace:
         "--excluded-paths",
         default=(
             "data/processed/criteo_sample_500k.parquet,"
-            "data/processed/criteo_sample_2m.parquet"
+            "data/processed/criteo_reserved_2m.parquet"
+        ),
+        help=(
+            "Samples whose rows are already spent. criteo_reserved_2m.parquet "
+            "is a plain draw that reserves rows for the conversion development "
+            "sample; that sample is drawn last, from what the audit and "
+            "confirmatory samples leave behind, so it cannot be excluded here "
+            "without a circular dependency."
         ),
     )
     parser.add_argument(
