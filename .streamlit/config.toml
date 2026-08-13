@@ -1,0 +1,15 @@
+# Theme for the targeting page. Kept here rather than injected as CSS so it
+# survives Streamlit upgrades, which rename generated class names freely.
+[theme]
+base = "light"
+primaryColor = "#0E6E64"
+backgroundColor = "#F7F7F3"
+secondaryBackgroundColor = "#ECECE5"
+textColor = "#16202A"
+font = "sans serif"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false

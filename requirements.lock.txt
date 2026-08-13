@@ -13,5 +13,10 @@ duckdb==1.5.4
 pyarrow==23.0.0
 lightgbm==4.6.0
 scikit-uplift==0.5.1
+joblib==1.5.2
+# Pinned so the repo installs complete. streamlit renders numbers that were
+# already computed and produces none of its own, so its version cannot move a
+# result.
+streamlit==1.32.0
 pytest==8.3.5
 ruff==0.14.13

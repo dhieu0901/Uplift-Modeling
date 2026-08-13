@@ -6,6 +6,12 @@
 # and figures are the only way a reader can check the numbers in README.md
 # without a multi-hour rerun against a 300 MB source file.
 
+# The saved policy is a fitted booster, too large for version control and
+# rebuilt in about a minute by scripts/fit_campaign_policy.py. The measurement
+# it serves lives in outputs/tables/, which is tracked.
+/artifacts/
+/outputs/target_list.csv
+
 /.agents/
 /.venv/
 /venv/
