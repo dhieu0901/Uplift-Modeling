@@ -20,13 +20,13 @@ Every figure below is backed by a tracked file in [outputs/](outputs/).
 | Visit targeting | Adopt uplift targeting at 5%, then confirm live | +5,861 visits [4,851, 6,871] on 4M untouched users, z = 11.4 |
 | Which model | Treat the S-learner as one acceptable instance, not the proven best | It wins 8 of 10 repeated splits and never leaves the top two, but no candidate is measurably better than the one below it |
 | Budget | Keep it tight | +47% at 5%, +15% at 10%, no measurable advantage at 20% or 30% |
-| Conversion | Keep response targeting | No interval excludes zero at any budget — no case for switching either way |
+| Conversion | Keep response targeting | No interval excludes zero at any budget - no case for switching either way |
 | Economics | No ROI claim | Outcome value and contact cost were never available |
 | Next step | Run the randomized test in [online_experiment_design.md](outputs/online_experiment_design.md) | Offline evidence bounds what a live campaign might do; it does not replace it |
 
 ## The Problem
 
-The incumbent ranks by `P(Y = 1 | X, T = 1)` — who is likely to respond. That
+The incumbent ranks by `P(Y = 1 | X, T = 1)` - who is likely to respond. That
 never establishes the campaign *caused* the response. Treating everyone lifts
 the visit rate from 3.820% to 4.854%, so roughly three-quarters of the
 "responses" a response model learns to predict would have happened anyway.
@@ -42,14 +42,15 @@ is no label to train on and none to validate against.
 
 ## Data
 
-Criteo Uplift v2.1 — **13,979,592 rows**, treatment randomized at 85%, visit
-4.70%, conversion 0.29%, average treatment effect **+1.0342 pp** on visits.
+Criteo Uplift v2.1 - **13,979,592 rows**, treatment randomized at 85%, visit
+4.70%, conversion 0.29%, average treatment effect **+1.0342 pp** on visits, all
+measured in [sample_provenance.md](outputs/sample_provenance.md).
 Randomization is the load-bearing property: without it, every causal estimate
 would rest on an untestable "all confounders controlled" assumption.
 
 **One column is excluded.** `exposure` records whether the ad actually rendered,
 which is decided *after* assignment. On the development sample, visit rate is
-41.97% among exposed users against 3.52% among treated-but-unexposed — an ad
+41.97% among exposed users against 3.52% among treated-but-unexposed - an ad
 renders only while someone is already browsing, so the column identifies people
 already on their way to visit. Conditioning on it is collider bias. The proof is
 that treated-unexposed (3.52%) sits *below* control (3.94%), which cannot happen
@@ -67,22 +68,34 @@ already 3.9x more likely to visit before any ad was shown.
 can be targeted on, because at selection time it is not known whose ad will
 render.
 
-Four disjoint samples, made disjoint by row identity rather than by value:
+Four samples, separated by row identity rather than by value
+([sample_provenance.md](outputs/sample_provenance.md)):
 
-| Sample | Rows | Measured effect | Role |
-|---|---:|---:|---|
-| Development | 500,000 | +0.9607 pp | Repeated-split stability |
-| Conversion development | 2,000,000 | +1.1257 pp | Rare-outcome experiments |
-| Audit | 1,000,000 | +1.0827 pp | Model selection, one internal locked test |
-| **Confirmatory** | **4,000,000** | **+1.0052 pp** | **Primary evidence, opened once** |
+| Sample | Rows | Measured effect | From population | Role |
+|---|---:|---:|---:|---|
+| Development | 500,000 | +0.9607 pp | -0.94 SE | Exposure diagnostics, semi-synthetic covariates |
+| Conversion development | 2,000,000 | +1.1257 pp | +2.38 SE | Rare-outcome sweep and calibration |
+| Audit | 1,000,000 | +1.0827 pp | +0.89 SE | Model selection, stability, one internal locked test |
+| **Confirmatory** | **4,000,000** | **+1.0052 pp** | **-1.06 SE** | **Primary evidence, opened once** |
 
-All four sit within about 1 SE of the population, which the identity rule is
-what secures. The source holds 2,221,150 rows whose values duplicate another
-row, and they are almost entirely inert (+0.002 pp effect, against +1.910 pp
-among unique rows). Excluding by value would drop every copy as soon as one was
-drawn, so later samples would lose inert rows and read high. Each row carries a
-`row_id`, and `count_overlapping_rows` verifies disjointness as a separate query
-before a sample is opened.
+Three of the four land within about one standard error of the population. The
+conversion development sample sits at +2.4, which is ordinary as the largest of
+four draws but is why the column is printed rather than summarised.
+
+Five of the six pairs share no rows. The exception is the two development
+samples, which share 71,193 - neither was drawn to exclude the other, so they
+overlap at the rate two independent draws of those sizes would. Nothing reported
+here compares them, and every sample that a result depends on being separate is
+verified separate: the confirmatory sample shares no row with any of the other
+three, and the audit sample that chose the model shares none with it.
+
+Identity is what makes that verifiable. The source holds 2,221,150 rows whose
+values duplicate another row, and they are almost entirely inert (+0.002 pp
+effect, against +1.910 pp among unique rows). Excluding by value would drop every
+copy as soon as one was drawn, so later samples would lose inert rows and read
+high. Each row carries a `row_id`, and `count_overlapping_rows` verifies
+separation as a query over every pair rather than only the pairs a result
+happens to rest on.
 
 ## Method
 
@@ -95,7 +108,7 @@ phi = mu_1(X) - mu_0(X)
 ```
 
 and the value of a targeting policy relative to treating nobody is
-`E[pi(X) * phi]`. AIPW is doubly robust — unbiased if either the outcome models
+`E[pi(X) * phi]`. AIPW is doubly robust - unbiased if either the outcome models
 or the propensity is right. In a randomized design the propensity is *known*, so
 that condition holds by construction, and the estimate stays unbiased however
 badly the outcome models fit. That is why one LightGBM configuration is fixed
@@ -105,7 +118,7 @@ models to be good, only to be out of fold.
 **Paired contrast.** The primary comparison is
 `[pi_uplift(X) - pi_response(X)] * phi`, not the difference of two separately
 estimated values. Users both policies select cancel, leaving uncertainty only
-where the policies disagree — necessary to resolve a difference inside the top 5%.
+where the policies disagree - necessary to resolve a difference inside the top 5%.
 
 **Protocol.** 80% development, 20% locked test, stratified on the joint
 treatment×outcome strata. Three cross-fitted folds produce out-of-fold candidate
@@ -117,7 +130,7 @@ test, so no result exists to change one's mind with.
 Budget (5%), confidence (95%), and the selection rule were fixed before looking
 at any data. Two policies are always evaluated but can never win:
 `response_model` (the incumbent) and `random_targeting` (a floor that audits the
-estimator — an uninformative policy must collect roughly 5% of the achievable
+estimator - an uninformative policy must collect roughly 5% of the achievable
 effect on a 5% budget; it reads 4.2%).
 
 **Candidates.** Eight learners on one shared LightGBM configuration:
@@ -125,7 +138,7 @@ S-, T-, X-learner (outcome modelling); CVT, transformed-outcome, R-, DR-learner
 (label transformation). CVT needed inverse-propensity reweighting, because its
 classical form assumes a balanced design and this one is 85/15.
 
-## Results — Visit
+## Results - Visit
 
 Selection on 800,000 out-of-fold development rows at the 5% budget:
 
@@ -141,8 +154,9 @@ Selection on 800,000 out-of-fold development rows at the 5% budget:
 | _random targeting_ | _-2,678.1_ | _[-3,193.3, -2,162.8]_ |
 
 The S-learner is the only candidate whose interval clears zero. Complexity did
-not pay: R- and DR-learner cost ~50 s each on five-fold cross-fitting and land
-mid-table, while a ridge regression at 0.29 s nearly matches them.
+not pay: in the runtime table of that report, R- and DR-learner cost 32 to 57
+seconds per selection fold on five-fold cross-fitting and land mid-table, while
+a ridge regression at 0.23 s nearly matches them.
 
 Confirmatory test on 4,000,000 untouched rows, opened once:
 
@@ -164,15 +178,18 @@ Note that response targeting has the *better* global AUUC (0.009130 against
 with the operational decision, which is why the primary criterion is a
 budget-specific contrast.
 
-## Results — Conversion
+## Results - Conversion
 
 At a 0.29% base rate, negative undersampling was swept over factors 1 to 200 for
-T- and CVT-based logistic learners, each with case-control prior correction.
-Selection chose **factor 1** — no undersampling at all, which is itself the
+T- and CVT-based logistic learners, each with case-control prior correction
+([rare_conversion_development.md](outputs/rare_conversion_development.md)).
+Selection chose **factor 1** - no undersampling at all, which is itself the
 answer to whether undersampling helps here.
 
-On the disjoint audit test the selected candidate trails at every budget and no
-interval excludes zero (at 5%: -22.3 conversions, [-64.9, 20.2]). Response
+On the separate audit test
+([audit_conversion_evaluation.md](outputs/audit_conversion_evaluation.md)) the
+selected candidate trails at every budget and no interval excludes zero (at 5%:
+-22.3 conversions, [-64.9, 20.2]). Response
 targeting stays because nothing justifies changing it, not because uplift was
 shown to be worse. This sample cannot separate the two.
 
@@ -215,16 +232,16 @@ analysis rather than ten independent experiments.
 Three side studies, kept because they inform the limits above rather than the
 headline. Each is a single script and a single report.
 
-- **Ground truth** ([semisynthetic_benchmark.md](outputs/semisynthetic_benchmark.md)) —
+- **Ground truth** ([semisynthetic_benchmark.md](outputs/semisynthetic_benchmark.md)) -
   real covariates with a known CATE, so the selection rule can be graded instead
   of trusted. It picked the transformed-outcome learner, which the ground truth
   confirms as the best of the eight (91.7% of oracle value). One draw, so this
   says the rule is not systematically broken, not that it is reliable.
-- **Calibration** ([conversion_uplift_calibration.md](outputs/conversion_uplift_calibration.md)) —
+- **Calibration** ([conversion_uplift_calibration.md](outputs/conversion_uplift_calibration.md)) -
   isotonic calibration made magnitude errors on the selected model *worse*
   (slope 1.140 to 0.783). Fitting a monotone correction on ~1,160 conversions is
   fragile. Not recommended.
-- **Online design** ([online_experiment_design.md](outputs/online_experiment_design.md)) —
+- **Online design** ([online_experiment_design.md](outputs/online_experiment_design.md)) -
   three arms, 1,328,819 users, 80% power, randomized before ranking so the
   analysis is intention-to-treat rather than a comparison of two selected subsets.
 
@@ -249,13 +266,13 @@ headline. Each is a single script and a single report.
 
 ```text
 scripts/     prepare samples, run each experiment, write reports to outputs/
-src/data     Criteo loading, undersampling, semi-synthetic generator
+src/data     Criteo loading, sample provenance, undersampling, semi-synthetic
 src/models   response baseline, 8 learners, random reference, calibrator
 src/evaluation  AIPW policy value, uplift curves, calibration, exposure IV
 src/experiments honest splitting and the locked protocol
 src/serving  the locked policy, saved with what it was measured to do
 app.py       Streamlit page over that policy
-tests/       63 tests, no data download required
+tests/       67 tests, no data download required
 outputs/     tracked evidence: reports, tables, figures
 docs/        reproducibility notes
 ```
@@ -318,6 +335,9 @@ python scripts\run_honest_stability.py `
   --models "response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner"
 
 python scripts\run_exposure_iv.py
+
+# Measure the population and every sample, including which pairs share rows.
+python scripts\report_sample_provenance.py
 ```
 
 The conversion, calibration, semi-synthetic, and online-design commands follow

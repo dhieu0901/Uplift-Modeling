@@ -1,0 +1,7 @@
+﻿left,right,overlapping_rows,disjoint
+Development,Conversion development,71193,False
+Development,Audit,0,True
+Development,Confirmatory,0,True
+Conversion development,Audit,0,True
+Conversion development,Confirmatory,0,True
+Audit,Confirmatory,0,True
