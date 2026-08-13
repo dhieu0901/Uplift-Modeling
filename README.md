@@ -48,11 +48,12 @@ Randomization is the load-bearing property: without it, every causal estimate
 would rest on an untestable "all confounders controlled" assumption.
 
 **One column is excluded.** `exposure` records whether the ad actually rendered,
-which is decided *after* assignment. Visit rate is 41.5% among exposed users
-against 3.5% among treated-but-unexposed — an ad renders only while someone is
-already browsing, so the column identifies people already on their way to visit.
-Conditioning on it is collider bias. The proof is that treated-unexposed (3.5%)
-sits *below* control (3.8%), which cannot happen under intact randomization.
+which is decided *after* assignment. On the development sample, visit rate is
+41.97% among exposed users against 3.52% among treated-but-unexposed — an ad
+renders only while someone is already browsing, so the column identifies people
+already on their way to visit. Conditioning on it is collider bias. The proof is
+that treated-unexposed (3.52%) sits *below* control (3.94%), which cannot happen
+under intact randomization.
 Only 3.6% of treated users were exposed, so the estimand is intention-to-treat:
 the effect of choosing to reach someone, which is the only lever a campaign has.
 

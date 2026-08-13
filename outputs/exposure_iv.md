@@ -12,7 +12,10 @@ comparing the exposed group against the control arm.
 
 ## Protocol
 
-- Data: `data/processed/criteo_sample_500k.parquet` (500,000 rows).
+- Data: `data/processed/criteo_sample_500k.parquet` (500,000 rows). This is a
+  development sample on purpose. What follows describes how the data was
+  recorded rather than how a model performs, so it has no business spending the
+  confirmatory sample, which is opened once.
 - Confidence level: `95.0%`.
 - Assignment is randomized and **no** control user can be exposed, so
   assignment is a valid instrument for exposure under one-sided noncompliance

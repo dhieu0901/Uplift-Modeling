@@ -221,7 +221,10 @@ comparing the exposed group against the control arm.
 
 ## Protocol
 
-- Data: `{Path(args.sample_path).as_posix()}` ({analyses[0].n:,} rows).
+- Data: `{Path(args.sample_path).as_posix()}` ({analyses[0].n:,} rows). This is a
+  development sample on purpose. What follows describes how the data was
+  recorded rather than how a model performs, so it has no business spending the
+  confirmatory sample, which is opened once.
 - Confidence level: `{100.0 * args.confidence_level:.1f}%`.
 - Assignment is randomized and **no** control user can be exposed, so
   assignment is a valid instrument for exposure under one-sided noncompliance
