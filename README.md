@@ -18,7 +18,7 @@ Every figure below is backed by a tracked file in [outputs/](outputs/).
 | Question | Decision | Evidence |
 |---|---|---|
 | Visit targeting | Adopt uplift targeting at 5%, then confirm live | +5,861 visits [4,851, 6,871] on 4M untouched users, z = 11.4 |
-| Which model | Treat the S-learner as one acceptable instance, not the proven best | It wins 6 of 10 repeated splits; three other learners win the rest |
+| Which model | Treat the S-learner as one acceptable instance, not the proven best | It wins 8 of 10 repeated splits and never leaves the top two, but no candidate is measurably better than the one below it |
 | Budget | Keep it tight | +47% at 5%, +15% at 10%, no measurable advantage at 20% or 30% |
 | Conversion | Keep response targeting | No interval excludes zero at any budget — no case for switching either way |
 | Economics | No ROI claim | Outcome value and contact cost were never available |
@@ -55,6 +55,16 @@ Conditioning on it is collider bias. The proof is that treated-unexposed (3.5%)
 sits *below* control (3.8%), which cannot happen under intact randomization.
 Only 3.6% of treated users were exposed, so the estimand is intention-to-treat:
 the effect of choosing to reach someone, which is the only lever a campaign has.
+
+The question the column invites is still answerable, just not by that comparison.
+No control user can be exposed, so assignment is a one-sided instrument for it
+and the Wald ratio identifies the effect among users whose ad renders:
+**+26.65 pp on visits [22.34, 30.96]**, against the +38.02 pp the naive reading
+gives. The 11.38 pp difference is selection, not campaign; those users were
+already 3.9x more likely to visit before any ad was shown.
+[exposure_iv.md](outputs/exposure_iv.md) reports both outcomes. Nothing there
+can be targeted on, because at selection time it is not known whose ad will
+render.
 
 Four disjoint samples, made disjoint by row identity rather than by value:
 
@@ -167,31 +177,34 @@ shown to be worse. This sample cannot separate the two.
 
 ## Stability
 
-Ten complete repetitions of the protocol on the 500,000-row sample:
+Ten complete repetitions of the protocol, on the same 1,000,000-row sample and
+with the same 3-fold out-of-fold selection that chose the champion. The
+selection stage is what is being measured, so it has to match: a smaller
+selection sample widens every candidate's interval and would show up here as
+instability belonging to the sample size rather than to the rule.
 
 | Winning learner | Splits won |
 |---|---:|
-| S-learner | 6 / 10 |
-| Transformed outcome | 2 / 10 |
-| X-learner | 1 / 10 |
-| DR-learner | 1 / 10 |
+| S-learner | 8 / 10 |
+| DR-learner | 2 / 10 |
 
-Mean difference +69.2 per 100,000 users (SD 60.9, range -10.8 to +171.8);
-8 of 10 point estimates positive, but only 1 of 10 intervals wholly positive.
+Mean difference +163.4 per 200,000 evaluated users (SD 90.3, range +44.2 to
++303.8). All ten point estimates are positive; 3 of 10 intervals are wholly
+positive, which is the resolution a fifth of the audit sample buys.
 
 A winner that changes across splits can mean the rule is unstable or that the
 candidates are tied, so each run also records how close the call was. The median
-gap between first and second place is 32.0 incremental outcomes, against a median
-half-width of 163.7 on the winner's own selection interval — a fifth of the
-uncertainty in the number being ranked. Two splits are decided by margins of 0.5
-and 3.3. In 3 of 10 runs no candidate reaches a positive selection bound at all,
-and the rule still names a winner, because it ranks candidates rather than
-requiring one to clear a bar.
+gap between first and second place is 99.8 incremental outcomes, against a median
+half-width of 443.4 on the winner's own selection interval, roughly a fifth of
+the uncertainty in the number being ranked. Every run had at least one candidate
+clear zero, a median of six.
 
 **The selection rule does not identify a single best learner**, and the margins
-say why: this sample cannot separate the candidates. The S-learner places first
-or second in 7 of 10 runs, which is a ranking tendency rather than a win. The
-defensible claim is about the policy class: uplift targeting at a tight budget
+say why: no candidate is measurably better than the one below it. The ordering is
+not arbitrary either, since the S-learner never leaves the top two. Gaps inside
+the noise and a stable leader are consistent with each other, and together they
+say the sample can rank these candidates without separating them. The defensible
+claim is therefore about the policy class: uplift targeting at a tight budget
 beats response targeting, and the S-learner is the instance that was locked before
 the confirmatory sample was drawn. These splits overlap, so they are a sensitivity
 analysis rather than ten independent experiments.
@@ -224,7 +237,11 @@ headline. Each is a single script and a single report.
 - Repeated splits overlap and are a sensitivity analysis, not replication.
 - The conversion result is absence of evidence, not evidence of absence.
 - Semi-synthetic findings depend on the response surface chosen.
-- No hyperparameter tuning, one dataset, one time window.
+- No hyperparameter tuning, one dataset, one time window. All eight learners
+  share one fixed LightGBM configuration, so the comparison is between these
+  learners *at that configuration* rather than between the learners as such.
+- The exposure estimate assumes assignment moves the outcome only through the
+  ad rendering. Reasonable for display advertising, but not testable here.
 - Offline evidence is not production impact.
 
 ## Repository
@@ -233,12 +250,33 @@ headline. Each is a single script and a single report.
 scripts/     prepare samples, run each experiment, write reports to outputs/
 src/data     Criteo loading, undersampling, semi-synthetic generator
 src/models   response baseline, 8 learners, random reference, calibrator
-src/evaluation  AIPW policy value, uplift curves, calibration, experiment design
+src/evaluation  AIPW policy value, uplift curves, calibration, exposure IV
 src/experiments honest splitting and the locked protocol
-tests/       48 tests, no data download required
+src/serving  the locked policy, saved with what it was measured to do
+app.py       Streamlit page over that policy
+tests/       63 tests, no data download required
 outputs/     tracked evidence: reports, tables, figures
 docs/        reproducibility notes
 ```
+
+## Using the Locked Policy
+
+A score ranks users but carries no units, so the saved policy travels with the
+rates the confirmatory test measured. That is what lets a target list arrive
+with a number attached, and keeps the number traceable to the sample it came
+from.
+
+```powershell
+python scripts\fit_campaign_policy.py          # fit once, save to artifacts/
+python scripts\score_campaign.py --budget 0.05 # rank users, write the list
+python -m streamlit run app.py                 # the same thing with a budget slider
+```
+
+Two things it will not do. It does not measure lift on the users passed in: a
+list awaiting contact has no outcomes, so the projection is the locked rate
+carried across and is labelled as such. And it refuses budgets the test never
+evaluated, because interpolating between them would invent a confidence interval
+that no sample supports.
 
 ## Reproduction
 
@@ -270,8 +308,15 @@ python scripts\run_honest_criteo.py `
   --contrast-path outputs\tables\audit_visit_contrasts.csv `
   --figure-path outputs\figures\audit_visit_policy_value.png
 python scripts\run_confirmatory_test.py
+
+# Repeat the whole protocol ten times. The sample and the selection folds match
+# the run above on purpose: a cheaper selection stage would measure sensitivity
+# to sample size rather than to the split.
 python scripts\run_honest_stability.py `
+  --sample-path data/processed/criteo_audit_1m.parquet --selection-folds 3 `
   --models "response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner"
+
+python scripts\run_exposure_iv.py
 ```
 
 The conversion, calibration, semi-synthetic, and online-design commands follow
