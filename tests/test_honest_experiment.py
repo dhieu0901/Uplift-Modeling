@@ -6,6 +6,7 @@ from src.data.semisynthetic import SemiSyntheticUpliftDataset
 from src.experiments.honest_uplift import (
     _model_seed,
     evaluate_locked_policies,
+    multiplicity_adjusted_bounds,
     select_validation_champion,
 )
 from src.experiments.splitting import UpliftSplit
@@ -43,6 +44,78 @@ def test_champion_is_selected_by_lower_bound_at_locked_budget_only():
     )
 
     assert champion == "model_b"
+
+
+def _contrast_row(policy: str, difference: float, half_width: float) -> dict:
+    return {
+        "policy": policy,
+        "budget_pct": 5.0,
+        "difference": difference,
+        "ci_lower": difference - half_width,
+        "ci_upper": difference + half_width,
+    }
+
+
+def test_adjusting_for_the_candidate_count_pulls_every_bound_toward_zero():
+    contrasts = pd.DataFrame(
+        [
+            _contrast_row("model_a", 100.0, 40.0),
+            _contrast_row("model_b", 80.0, 40.0),
+            _contrast_row("model_c", 60.0, 40.0),
+        ]
+    )
+
+    adjusted = multiplicity_adjusted_bounds(
+        contrasts,
+        candidate_policies=["model_a", "model_b", "model_c"],
+        primary_budget=0.05,
+    )
+
+    assert set(adjusted["n_candidates"]) == {3}
+    merged = contrasts.merge(adjusted, on="policy")
+    assert (merged["ci_lower_adjusted"] < merged["ci_lower"]).all()
+    # Equal standard errors, so the correction is a constant shift and the
+    # ordering the selection rule reads is untouched.
+    shift = merged["ci_lower"] - merged["ci_lower_adjusted"]
+    np.testing.assert_allclose(shift, shift.iloc[0])
+
+
+def test_a_single_candidate_needs_no_adjustment():
+    contrasts = pd.DataFrame([_contrast_row("model_a", 100.0, 40.0)])
+
+    adjusted = multiplicity_adjusted_bounds(
+        contrasts,
+        candidate_policies=["model_a"],
+        primary_budget=0.05,
+    )
+
+    assert adjusted["adjusted_confidence_level"].iloc[0] == pytest.approx(0.95)
+    assert adjusted["ci_lower_adjusted"].iloc[0] == pytest.approx(60.0)
+
+
+def test_a_wide_interval_is_penalised_more_than_a_narrow_one():
+    # This is why the correction is reported next to the selection rule rather
+    # than used by it: the two candidates swap order under adjustment.
+    contrasts = pd.DataFrame(
+        [
+            _contrast_row("wide", 300.0, 250.0),
+            _contrast_row("narrow", 120.0, 80.0),
+        ]
+    )
+
+    adjusted = multiplicity_adjusted_bounds(
+        contrasts,
+        candidate_policies=["wide", "narrow"],
+        primary_budget=0.05,
+    ).set_index("policy")
+
+    assert contrasts.set_index("policy").loc["wide", "ci_lower"] > (
+        contrasts.set_index("policy").loc["narrow", "ci_lower"]
+    )
+    assert (
+        adjusted.loc["wide", "ci_lower_adjusted"]
+        < adjusted.loc["narrow", "ci_lower_adjusted"]
+    )
 
 
 def test_model_seed_depends_only_on_the_base_seed_and_the_model_name():

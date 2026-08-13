@@ -20,19 +20,32 @@
 
 ## Out-of-Sample Development Selection
 
-| policy              | budget_pct | n_targeted | incremental_outcome_rate | standard_error_rate | ci_lower_rate | ci_upper_rate | incremental_outcome | ci_lower    | ci_upper    | benchmark_relative_auuc | difference_vs_response | difference_ci_lower | difference_ci_upper |
-| ------------------- | ---------- | ---------- | ------------------------ | ------------------- | ------------- | ------------- | ------------------- | ----------- | ----------- | ----------------------- | ---------------------- | ------------------- | ------------------- |
-| s_learner           | 5.000000   | 40000      | 0.004907                 | 0.000281            | 0.004356      | 0.005459      | 3925.912961         | 3484.681153 | 4367.144769 | 0.009805                | 927.967129             | 491.509958          | 1364.424301         |
-| x_learner           | 5.000000   | 40000      | 0.004151                 | 0.000285            | 0.003593      | 0.004709      | 3320.809352         | 2874.172353 | 3767.446350 | 0.008867                | 322.863520             | -113.706339         | 759.433378          |
-| transformed_outcome | 5.000000   | 40000      | 0.004112                 | 0.000265            | 0.003593      | 0.004631      | 3289.518281         | 2874.313371 | 3704.723192 | 0.009715                | 291.572450             | -131.730845         | 714.875744          |
-| dr_learner          | 5.000000   | 40000      | 0.004082                 | 0.000281            | 0.003530      | 0.004634      | 3265.573726         | 2824.319473 | 3706.827979 | 0.008665                | 267.627894             | -168.730691         | 703.986479          |
-| r_learner           | 5.000000   | 40000      | 0.003918                 | 0.000284            | 0.003362      | 0.004474      | 3134.720986         | 2689.882864 | 3579.559107 | 0.008819                | 136.775154             | -294.041238         | 567.591546          |
-| t_learner           | 5.000000   | 40000      | 0.003796                 | 0.000285            | 0.003238      | 0.004354      | 3036.810749         | 2590.499745 | 3483.121752 | 0.008169                | 38.864917              | -408.716931         | 486.446765          |
-| cvt                 | 5.000000   | 40000      | 0.003145                 | 0.000264            | 0.002628      | 0.003661      | 2515.766754         | 2102.576519 | 2928.956989 | 0.007833                | -482.179078            | -905.987611         | -58.370545          |
-| random_targeting    | 5.000000   | 40000      | 0.000400                 | 0.000111            | 0.000183      | 0.000617      | 319.883211          | 146.468127  | 493.298295  | 0.005456                | -2678.062621           | -3193.306309        | -2162.818933        |
-| response_model      | 5.000000   | 40000      | 0.003747                 | 0.000324            | 0.003111      | 0.004383      | 2997.945832         | 2489.169415 | 3506.722248 | 0.009882                | nan                    | nan                 | nan                 |
+| policy              | budget_pct | n_targeted | incremental_outcome_rate | standard_error_rate | ci_lower_rate | ci_upper_rate | incremental_outcome | ci_lower    | ci_upper    | benchmark_relative_auuc | difference_vs_response | difference_ci_lower | difference_ci_upper | ci_lower_adjusted |
+| ------------------- | ---------- | ---------- | ------------------------ | ------------------- | ------------- | ------------- | ------------------- | ----------- | ----------- | ----------------------- | ---------------------- | ------------------- | ------------------- | ----------------- |
+| s_learner           | 5.000000   | 40000      | 0.004907                 | 0.000281            | 0.004356      | 0.005459      | 3925.912961         | 3484.681153 | 4367.144769 | 0.009805                | 927.967129             | 491.509958          | 1364.424301         | 328.916532        |
+| x_learner           | 5.000000   | 40000      | 0.004151                 | 0.000285            | 0.003593      | 0.004709      | 3320.809352         | 2874.172353 | 3767.446350 | 0.008867                | 322.863520             | -113.706339         | 759.433378          | -276.341743       |
+| transformed_outcome | 5.000000   | 40000      | 0.004112                 | 0.000265            | 0.003593      | 0.004631      | 3289.518281         | 2874.313371 | 3704.723192 | 0.009715                | 291.572450             | -131.730845         | 714.875744          | -289.424055       |
+| dr_learner          | 5.000000   | 40000      | 0.004082                 | 0.000281            | 0.003530      | 0.004634      | 3265.573726         | 2824.319473 | 3706.827979 | 0.008665                | 267.627894             | -168.730691         | 703.986479          | -331.287390       |
+| r_learner           | 5.000000   | 40000      | 0.003918                 | 0.000284            | 0.003362      | 0.004474      | 3134.720986         | 2689.882864 | 3579.559107 | 0.008819                | 136.775154             | -294.041238         | 567.591546          | -454.533304       |
+| t_learner           | 5.000000   | 40000      | 0.003796                 | 0.000285            | 0.003238      | 0.004354      | 3036.810749         | 2590.499745 | 3483.121752 | 0.008169                | 38.864917              | -408.716931         | 486.446765          | -575.454634       |
+| cvt                 | 5.000000   | 40000      | 0.003145                 | 0.000264            | 0.002628      | 0.003661      | 2515.766754         | 2102.576519 | 2928.956989 | 0.007833                | -482.179078            | -905.987611         | -58.370545          | -1063.869038      |
+| random_targeting    | 5.000000   | 40000      | 0.000400                 | 0.000111            | 0.000183      | 0.000617      | 319.883211          | 146.468127  | 493.298295  | 0.005456                | -2678.062621           | -3193.306309        | -2162.818933        | nan               |
+| response_model      | 5.000000   | 40000      | 0.003747                 | 0.000324            | 0.003111      | 0.004383      | 2997.945832         | 2489.169415 | 3506.722248 | 0.009882                | nan                    | nan                 | nan                 | nan               |
 
 Selected champion: **s_learner**.
+
+`ci_lower_adjusted` re-derives each bound at
+`99.29%`, which spreads the same
+`5%` error rate across the
+`7` candidates. The unadjusted column answers "is this candidate
+above response targeting"; the adjusted one answers "does any candidate in this
+table stand above it", which is the question the selection rule actually asks by
+keeping the largest bound. `s_learner` is the only candidate still clearing zero, so the claim survives being read as a statement about the whole table.
+
+Selection still uses the unadjusted rule fixed before the data was seen.
+Adjusting penalizes wide intervals more than narrow ones and so can reorder the
+table, and switching to it here would be choosing a rule after seeing the
+result.
 
 ## Locked-Test Policy Value
 
@@ -86,40 +99,40 @@ contrast because the campaign has a fixed operating budget.
 
 | stage            | model                   | fit_seconds |
 | ---------------- | ----------------------- | ----------- |
-| selection_fold_1 | random_targeting        | 0.000045    |
-| selection_fold_1 | response_model          | 6.066389    |
-| selection_fold_1 | s_learner               | 3.316289    |
-| selection_fold_1 | t_learner               | 10.144851   |
-| selection_fold_1 | x_learner               | 13.608264   |
-| selection_fold_1 | cvt                     | 2.781499    |
-| selection_fold_1 | transformed_outcome     | 0.223393    |
-| selection_fold_1 | r_learner               | 23.301047   |
-| selection_fold_1 | dr_learner              | 23.036137   |
-| selection_fold_1 | aipw_nuisance_t_learner | 3.605834    |
-| selection_fold_2 | random_targeting        | 0.000026    |
-| selection_fold_2 | response_model          | 2.651863    |
-| selection_fold_2 | s_learner               | 2.941269    |
-| selection_fold_2 | t_learner               | 3.880963    |
-| selection_fold_2 | x_learner               | 7.287922    |
-| selection_fold_2 | cvt                     | 2.476667    |
-| selection_fold_2 | transformed_outcome     | 0.211879    |
-| selection_fold_2 | r_learner               | 28.634872   |
-| selection_fold_2 | dr_learner              | 59.103082   |
-| selection_fold_2 | aipw_nuisance_t_learner | 9.956238    |
-| selection_fold_3 | random_targeting        | 0.000030    |
-| selection_fold_3 | response_model          | 5.944958    |
-| selection_fold_3 | s_learner               | 6.747449    |
-| selection_fold_3 | t_learner               | 9.767585    |
-| selection_fold_3 | x_learner               | 19.932799   |
-| selection_fold_3 | cvt                     | 5.851935    |
-| selection_fold_3 | transformed_outcome     | 0.337661    |
-| selection_fold_3 | r_learner               | 57.197604   |
-| selection_fold_3 | dr_learner              | 56.730439   |
-| selection_fold_3 | aipw_nuisance_t_learner | 9.630522    |
-| locked_test      | response_model          | 7.272476    |
-| locked_test      | random_targeting        | 0.000057    |
-| locked_test      | s_learner               | 8.257106    |
-| locked_test      | aipw_nuisance_t_learner | 11.363442   |
+| selection_fold_1 | random_targeting        | 0.000877    |
+| selection_fold_1 | response_model          | 9.349726    |
+| selection_fold_1 | s_learner               | 6.199379    |
+| selection_fold_1 | t_learner               | 11.701034   |
+| selection_fold_1 | x_learner               | 18.230446   |
+| selection_fold_1 | cvt                     | 4.019658    |
+| selection_fold_1 | transformed_outcome     | 0.271046    |
+| selection_fold_1 | r_learner               | 38.750115   |
+| selection_fold_1 | dr_learner              | 35.700297   |
+| selection_fold_1 | aipw_nuisance_t_learner | 5.346032    |
+| selection_fold_2 | random_targeting        | 0.000037    |
+| selection_fold_2 | response_model          | 3.795668    |
+| selection_fold_2 | s_learner               | 3.925186    |
+| selection_fold_2 | t_learner               | 5.139560    |
+| selection_fold_2 | x_learner               | 10.769543   |
+| selection_fold_2 | cvt                     | 3.627291    |
+| selection_fold_2 | transformed_outcome     | 0.233176    |
+| selection_fold_2 | r_learner               | 57.374990   |
+| selection_fold_2 | dr_learner              | 37.044634   |
+| selection_fold_2 | aipw_nuisance_t_learner | 4.122982    |
+| selection_fold_3 | random_targeting        | 0.000029    |
+| selection_fold_3 | response_model          | 3.186975    |
+| selection_fold_3 | s_learner               | 3.637845    |
+| selection_fold_3 | t_learner               | 4.996918    |
+| selection_fold_3 | x_learner               | 9.726127    |
+| selection_fold_3 | cvt                     | 3.327754    |
+| selection_fold_3 | transformed_outcome     | 0.225264    |
+| selection_fold_3 | r_learner               | 32.804152   |
+| selection_fold_3 | dr_learner              | 31.694309   |
+| selection_fold_3 | aipw_nuisance_t_learner | 5.307358    |
+| locked_test      | response_model          | 4.331643    |
+| locked_test      | random_targeting        | 0.000038    |
+| locked_test      | s_learner               | 5.636166    |
+| locked_test      | aipw_nuisance_t_learner | 6.904868    |
 
 ## Statistical Scope
 

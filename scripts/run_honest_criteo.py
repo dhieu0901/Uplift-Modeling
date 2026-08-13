@@ -18,8 +18,12 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
 from src.data.criteo import load_criteo, subsample_criteo
-from src.experiments.honest_uplift import run_honest_uplift_experiment
+from src.experiments.honest_uplift import (
+    multiplicity_adjusted_bounds,
+    run_honest_uplift_experiment,
+)
 from src.models.registry import (
+    REFERENCE_POLICIES,
     rare_outcome_model_factories,
     select_model_factories,
 )
@@ -214,6 +218,31 @@ def _parse_float_values(
     return values
 
 
+def _adjusted_verdict(survivors: list[str], champion: str) -> str:
+    """State what survives the correction, in the terms the table is read in."""
+    if not survivors:
+        return (
+            "No candidate clears zero once the table is read as a whole, so the "
+            "champion is the best of a set that the selection sample cannot "
+            "separate from response targeting."
+        )
+    if survivors == [champion]:
+        return (
+            f"`{champion}` is the only candidate still clearing zero, so the "
+            "claim survives being read as a statement about the whole table."
+        )
+    others = ", ".join(f"`{name}`" for name in survivors if name != champion)
+    if champion in survivors:
+        return (
+            f"`{champion}` still clears zero, and so does {others} — the "
+            "correction narrows the field without isolating one candidate."
+        )
+    return (
+        f"`{champion}` no longer clears zero, while {others} does. The rule "
+        "picked on the unadjusted bound, so this is a caveat on the choice."
+    )
+
+
 def build_report(
     args: argparse.Namespace,
     result,
@@ -247,11 +276,28 @@ def build_report(
         on="policy",
         how="left",
     )
+    adjusted = multiplicity_adjusted_bounds(
+        result.validation_contrasts,
+        candidate_policies=[
+            name for name in result.validation_scores
+            if name not in REFERENCE_POLICIES
+        ],
+        primary_budget=args.primary_budget,
+        confidence_level=args.confidence_level,
+    )
+    validation_primary = validation_primary.merge(
+        adjusted[["policy", "ci_lower_adjusted"]],
+        on="policy",
+        how="left",
+    )
     validation_primary = validation_primary.sort_values(
         "difference_ci_lower",
         ascending=False,
         na_position="last",
     )
+    n_candidates = int(adjusted["n_candidates"].iloc[0])
+    adjusted_level = float(adjusted["adjusted_confidence_level"].iloc[0])
+    survivors = adjusted[adjusted["ci_lower_adjusted"] > 0.0]["policy"].tolist()
     # The verdict describes the champion. The contrast table lists the
     # reference policies first, so it must be filtered by name rather than
     # read positionally.
@@ -304,6 +350,19 @@ def build_report(
 {dataframe_to_markdown(validation_primary)}
 
 Selected champion: **{result.champion}**.
+
+`ci_lower_adjusted` re-derives each bound at
+`{100.0 * adjusted_level:.2f}%`, which spreads the same
+`{100.0 * (1.0 - args.confidence_level):.0f}%` error rate across the
+`{n_candidates}` candidates. The unadjusted column answers "is this candidate
+above response targeting"; the adjusted one answers "does any candidate in this
+table stand above it", which is the question the selection rule actually asks by
+keeping the largest bound. {_adjusted_verdict(survivors, result.champion)}
+
+Selection still uses the unadjusted rule fixed before the data was seen.
+Adjusting penalizes wide intervals more than narrow ones and so can reorder the
+table, and switching to it here would be choosing a rule after seeing the
+result.
 
 ## Locked-Test Policy Value
 

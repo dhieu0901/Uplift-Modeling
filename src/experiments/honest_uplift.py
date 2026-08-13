@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 import hashlib
+from statistics import NormalDist
 from time import perf_counter
 
 import numpy as np
@@ -224,7 +225,76 @@ def select_validation_champion(
     primary_budget: float,
 ) -> str:
     """Select the largest lower confidence bound at the locked budget."""
-    required = {"policy", "budget_pct", "difference", "ci_lower"}
+    candidates = _candidates_at_budget(
+        validation_contrasts,
+        candidate_policies,
+        primary_budget,
+    )
+    ordered = candidates.sort_values(
+        ["ci_lower", "difference"],
+        ascending=[False, False],
+    )
+    return str(ordered.iloc[0]["policy"])
+
+
+def multiplicity_adjusted_bounds(
+    validation_contrasts: pd.DataFrame,
+    candidate_policies: Sequence[str],
+    primary_budget: float,
+    confidence_level: float = 0.95,
+) -> pd.DataFrame:
+    """Re-derive each candidate's lower bound at a Bonferroni-corrected level.
+
+    The selection rule reads one interval per candidate and keeps the largest
+    lower bound, so that bound is a maximum over several intervals and reads
+    high. Spreading the same error rate across the candidates gives the level
+    at which "only this candidate clears zero" is a statement about the whole
+    table rather than about one row of it.
+
+    The champion is still chosen by :func:`select_validation_champion`, whose
+    rule was fixed before any data was seen. Adjusting monotonically penalizes
+    wide intervals more than narrow ones, so it can reorder candidates; using
+    it to pick would be choosing a rule after seeing the result. This is
+    reported next to the rule, never in place of it.
+    """
+    candidates = _candidates_at_budget(
+        validation_contrasts,
+        candidate_policies,
+        primary_budget,
+        required=frozenset(
+            {"policy", "budget_pct", "difference", "ci_lower", "ci_upper"}
+        ),
+    )
+    if not 0.0 < confidence_level < 1.0:
+        raise ValueError("confidence_level must be in the interval (0, 1).")
+    n_candidates = len(candidates)
+    alpha = 1.0 - confidence_level
+    z_nominal = NormalDist().inv_cdf(0.5 + confidence_level / 2.0)
+    z_adjusted = NormalDist().inv_cdf(1.0 - alpha / (2.0 * n_candidates))
+    # n * standard_error, recovered from the interval the table already carries.
+    standard_error = (
+        candidates["ci_upper"] - candidates["ci_lower"]
+    ) / (2.0 * z_nominal)
+    return pd.DataFrame(
+        {
+            "policy": candidates["policy"].to_numpy(),
+            "n_candidates": n_candidates,
+            "adjusted_confidence_level": 1.0 - alpha / n_candidates,
+            "ci_lower_adjusted": (
+                candidates["difference"] - z_adjusted * standard_error
+            ).to_numpy(),
+        }
+    )
+
+
+def _candidates_at_budget(
+    validation_contrasts: pd.DataFrame,
+    candidate_policies: Sequence[str],
+    primary_budget: float,
+    required: frozenset[str] = frozenset(
+        {"policy", "budget_pct", "difference", "ci_lower"}
+    ),
+) -> pd.DataFrame:
     missing = sorted(required - set(validation_contrasts.columns))
     if missing:
         raise ValueError(f"Validation table is missing columns: {missing}")
@@ -235,11 +305,7 @@ def select_validation_champion(
     ].dropna(subset=["ci_lower"])
     if candidates.empty:
         raise ValueError("No candidate has a valid estimate at the primary budget.")
-    ordered = candidates.sort_values(
-        ["ci_lower", "difference"],
-        ascending=[False, False],
-    )
-    return str(ordered.iloc[0]["policy"])
+    return candidates
 
 
 def evaluate_locked_policies(
@@ -445,6 +511,12 @@ def _cross_validated_selection_predictions(
             progress=progress,
         )
         for name, score in fold_scores.items():
+            # Each fold is scored by a separately fitted model, so raw scores
+            # are only comparable within a fold. Targeting the top 5% of the
+            # pooled column would otherwise favour whichever fold happened to
+            # produce the largest numbers. Ranking within the fold first makes
+            # the pooled column a ranking across folds, which is all the
+            # budget-constrained policy needs.
             scores[name][holdout_indices] = _percentile_rank(score)
         fold_mu0, fold_mu1, nuisance_seconds = _fit_nuisance_and_predict(
             fit_split,
