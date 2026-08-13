@@ -2,53 +2,57 @@
 
 ## Protocol
 
-- Data: `data/processed/criteo_sample_500k.parquet` (500,000 rows).
+- Data: `data/processed/criteo_audit_1m.parquet` (1,000,000 rows).
 - Seeds: `42,123,2026,730,991,1201,1601,2401,3301,4401`.
 - Primary budget: `5.00%`.
 - Candidate models: `response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner`.
+- Selection: `3`-fold out-of-fold predictions over `800,000` observations.
 - Every run repeats training, out-of-sample model selection, development
   refitting, nuisance estimation, and locked-test evaluation.
 - Each run uses the same pre-specified candidate set and selection rule.
+
+The selection stage is the one being measured, so it has to match the run that
+produced the headline champion. A smaller selection sample widens every
+candidate's interval, which would show up here as instability that belongs to
+the sample size rather than to the rule.
 
 ## Aggregate Stability
 
 | runs | mean_difference | std_difference | min_difference | max_difference | positive_point_rate | positive_ci_rate | negative_ci_rate |
 | ---- | --------------- | -------------- | -------------- | -------------- | ------------------- | ---------------- | ---------------- |
-| 10   | 69.235452       | 60.876559      | -10.816453     | 171.818011     | 0.800000            | 0.100000         | 0.000000         |
+| 10   | 163.426174      | 90.304500      | 44.232281      | 303.799070     | 1.000000            | 0.300000         | 0.000000         |
 
 ## Champion Frequency
 
-| champion            | runs | mean_difference | positive_rate |
-| ------------------- | ---- | --------------- | ------------- |
-| s_learner           | 6    | 57.625832       | 0.666667      |
-| transformed_outcome | 2    | 71.701318       | 1.000000      |
-| x_learner           | 1    | 149.124736      | 1.000000      |
-| dr_learner          | 1    | 54.072150       | 1.000000      |
+| champion   | runs | mean_difference | positive_rate |
+| ---------- | ---- | --------------- | ------------- |
+| s_learner  | 8    | 183.176450      | 1.000000      |
+| dr_learner | 2    | 84.425072       | 1.000000      |
 
 ## How Close Was Each Selection
 
-- Median margin between the champion and the runner-up: `32.0` incremental outcomes.
-- Runs where `s_learner` was not selected: **4 of 10**.
-- Median half-width of the champion's own selection interval: `163.7`. The margin is `0.20` times that width.
-- Runs in which no candidate reached a positive selection bound: **3 of 10**. The rule still names a champion in those runs, because it ranks candidates rather than requiring one to clear a bar.
-- `s_learner` finished first or second in **7 of 10** runs (median rank 1).
+- Median margin between the champion and the runner-up: `99.8` incremental outcomes.
+- Runs where `s_learner` was not selected: **2 of 10**.
+- Median half-width of the champion's own selection interval: `443.4`. The margin is `0.23` times that width.
+- Every run had at least one candidate clear zero, a median of **6**. The rule ranks rather than requiring a bar to be cleared, so this is a property of the selection sample rather than something the rule enforces.
+- `s_learner` finished first or second in **10 of 10** runs (median rank 1).
 
-The gap between first and second place is smaller than the uncertainty attached to first place itself, so the leaderboard reorders under resampling without any candidate being measurably better. A changing champion here reflects candidates the selection sample cannot separate, and the frequency table should be read as a ranking tendency rather than as evidence that one architecture wins.
+The gap between first and second place is smaller than the uncertainty attached to first place itself, so no candidate is measurably better than the one immediately below it. The ordering is not arbitrary either: `s_learner` never leaves the top two. Pairwise gaps inside the noise and a stable leader are consistent with each other, and together they say the sample can rank these candidates without being able to separate them. The defensible claim is about the policy class rather than about one architecture.
 
 ## Results by Split
 
-| seed | champion            | runner_up           | selection_margin | champion_selection_ci_lower | runner_up_selection_ci_lower | champion_selection_halfwidth | n_candidates_with_positive_bound | s_learner_selection_rank | difference_vs_response | ci_lower    | ci_upper   | champion_incremental_outcome | response_incremental_outcome | champion_auuc | response_auuc | fit_seconds |
-| ---- | ------------------- | ------------------- | ---------------- | --------------------------- | ---------------------------- | ---------------------------- | -------------------------------- | ------------------------ | ---------------------- | ----------- | ---------- | ---------------------------- | ---------------------------- | ------------- | ------------- | ----------- |
-| 42   | s_learner           | r_learner           | 25.586870        | 35.350220                   | 9.763350                     | 167.614987                   | 2                                | 1                        | 171.818011             | 9.287822    | 334.348201 | 499.147930                   | 327.329918                   | 0.009656      | 0.008810      | 223.066658  |
-| 123  | s_learner           | x_learner           | 3.294823         | -69.338211                  | -72.633035                   | 169.632815                   | 0                                | 1                        | 111.294755             | -47.157707  | 269.747218 | 455.290688                   | 343.995932                   | 0.008762      | 0.008686      | 128.288874  |
-| 2026 | s_learner           | transformed_outcome | 68.352085        | 22.325228                   | -46.026858                   | 178.228599                   | 1                                | 1                        | -8.241500              | -183.457789 | 166.974789 | 450.871741                   | 459.113241                   | 0.008648      | 0.008995      | 129.021052  |
-| 730  | transformed_outcome | dr_learner          | 47.190695        | -16.951243                  | -64.141937                   | 160.239724                   | 0                                | 3                        | 85.284776              | -73.012979  | 243.582530 | 423.232921                   | 337.948146                   | 0.008975      | 0.008946      | 122.743778  |
-| 991  | x_learner           | s_learner           | 14.477859        | -61.028969                  | -75.506828                   | 162.903318                   | 0                                | 2                        | 149.124736             | -7.870575   | 306.120048 | 346.572679                   | 197.447943                   | 0.008036      | 0.008481      | 77.165413   |
-| 1201 | dr_learner          | x_learner           | 0.518596         | 39.210970                   | 38.692375                    | 155.836075                   | 5                                | 5                        | 54.072150              | -99.911692  | 208.055993 | 378.581729                   | 324.509579                   | 0.008158      | 0.008342      | 83.472002   |
-| 1601 | s_learner           | r_learner           | 32.404664        | 38.949711                   | 6.545047                     | 151.087060                   | 2                                | 1                        | 36.075967              | -132.593529 | 204.745462 | 336.396354                   | 300.320387                   | 0.008828      | 0.008293      | 63.456410   |
-| 2401 | s_learner           | dr_learner          | 31.564764        | 9.742574                    | -21.822190                   | 165.621482                   | 1                                | 1                        | -10.816453             | -179.798753 | 158.165846 | 434.843106                   | 445.659559                   | 0.007652      | 0.008396      | 65.008810   |
-| 3301 | transformed_outcome | dr_learner          | 54.826029        | 83.846362                   | 29.020333                    | 159.384172                   | 3                                | 5                        | 58.117860              | -97.539924  | 213.775644 | 399.731745                   | 341.613885                   | 0.009269      | 0.008690      | 69.585575   |
-| 4401 | s_learner           | t_learner           | 52.908189        | 152.492588                  | 99.584399                    | 164.483677                   | 4                                | 1                        | 45.624212              | -122.386857 | 213.635281 | 460.021639                   | 414.397427                   | 0.008889      | 0.008841      | 72.486649   |
+| seed | champion   | runner_up           | selection_margin | champion_selection_ci_lower | runner_up_selection_ci_lower | champion_selection_halfwidth | n_candidates_with_positive_bound | s_learner_selection_rank | difference_vs_response | ci_lower    | ci_upper   | champion_incremental_outcome | response_incremental_outcome | champion_auuc | response_auuc | fit_seconds | sample_path                            | models                                                                                    | primary_budget | dataset_rows | selection_folds | selection_size |
+| ---- | ---------- | ------------------- | ---------------- | --------------------------- | ---------------------------- | ---------------------------- | -------------------------------- | ------------------------ | ---------------------- | ----------- | ---------- | ---------------------------- | ---------------------------- | ------------- | ------------- | ----------- | -------------------------------------- | ----------------------------------------------------------------------------------------- | -------------- | ------------ | --------------- | -------------- |
+| 42   | dr_learner | s_learner           | 98.397541        | 467.330268                  | 368.932727                   | 441.715877                   | 6                                | 2                        | 98.933323              | -126.153108 | 324.019753 | 997.813896                   | 898.880573                   | 0.009126      | 0.009990      | 688.069058  | data/processed/criteo_audit_1m.parquet | response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner | 0.050000       | 1000000      | 3               | 800000         |
+| 123  | s_learner  | r_learner           | 354.105269       | 437.014044                  | 82.908775                    | 419.247834                   | 5                                | 1                        | 283.727273             | 75.586959   | 491.867586 | 840.199626                   | 556.472353                   | 0.009465      | 0.009549      | 592.728204  | data/processed/criteo_audit_1m.parquet | response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner | 0.050000       | 1000000      | 3               | 800000         |
+| 2026 | s_learner  | x_learner           | 268.744443       | 497.588514                  | 228.844072                   | 446.365246                   | 4                                | 1                        | 185.347109             | -38.001827  | 408.696045 | 788.107235                   | 602.760125                   | 0.009954      | 0.009809      | 538.462950  | data/processed/criteo_audit_1m.parquet | response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner | 0.050000       | 1000000      | 3               | 800000         |
+| 730  | s_learner  | dr_learner          | 80.364570        | 444.547615                  | 364.183046                   | 450.770590                   | 6                                | 1                        | 172.514826             | -55.321987  | 400.351639 | 885.666318                   | 713.151492                   | 0.009787      | 0.010028      | 579.035010  | data/processed/criteo_audit_1m.parquet | response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner | 0.050000       | 1000000      | 3               | 800000         |
+| 991  | s_learner  | x_learner           | 60.288044        | 479.735373                  | 419.447329                   | 430.613248                   | 6                                | 1                        | 168.694074             | -48.764286  | 386.152434 | 794.137218                   | 625.443144                   | 0.009757      | 0.009964      | 469.689966  | data/processed/criteo_audit_1m.parquet | response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner | 0.050000       | 1000000      | 3               | 800000         |
+| 1201 | s_learner  | dr_learner          | 133.177700       | 490.044329                  | 356.866630                   | 449.102927                   | 6                                | 1                        | 78.313221              | -146.852886 | 303.479328 | 904.562190                   | 826.248968                   | 0.009763      | 0.009982      | 359.001110  | data/processed/criteo_audit_1m.parquet | response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner | 0.050000       | 1000000      | 3               | 800000         |
+| 1601 | s_learner  | transformed_outcome | 202.447736       | 565.178162                  | 362.730425                   | 445.155186                   | 5                                | 1                        | 44.232281              | -183.647401 | 272.111963 | 772.469094                   | 728.236813                   | 0.009714      | 0.009792      | 429.861926  | data/processed/criteo_audit_1m.parquet | response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner | 0.050000       | 1000000      | 3               | 800000         |
+| 2401 | s_learner  | transformed_outcome | 101.282574       | 263.129656                  | 161.847082                   | 433.026443                   | 6                                | 1                        | 303.799070             | 95.486028   | 512.112112 | 871.134462                   | 567.335392                   | 0.009532      | 0.009735      | 239.204384  | data/processed/criteo_audit_1m.parquet | response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner | 0.050000       | 1000000      | 3               | 800000         |
+| 3301 | dr_learner | s_learner           | 52.286765        | 515.875629                  | 463.588864                   | 430.597358                   | 6                                | 2                        | 69.916821              | -151.537777 | 291.371419 | 847.237460                   | 777.320640                   | 0.009073      | 0.009795      | 267.545682  | data/processed/criteo_audit_1m.parquet | response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner | 0.050000       | 1000000      | 3               | 800000         |
+| 4401 | s_learner  | dr_learner          | 9.510515         | 376.859259                  | 367.348744                   | 446.843664                   | 5                                | 1                        | 228.783745             | 13.601290   | 443.966199 | 981.787865                   | 753.004120                   | 0.010008      | 0.010015      | 236.688966  | data/processed/criteo_audit_1m.parquet | response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner | 0.050000       | 1000000      | 3               | 800000         |
 
 ![Honest-split stability](figures/visit_stability.png)
 

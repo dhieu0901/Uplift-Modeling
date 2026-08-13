@@ -32,6 +32,16 @@ from src.reporting import dataframe_to_markdown
 DEFAULT_MODELS = "response_model,s_learner"
 
 
+def report(message: str) -> None:
+    """Print progress so it survives redirection to a file.
+
+    A run of this length is normally watched through a log, and Python buffers
+    stdout when it is not a terminal. Without the flush, nothing appears until
+    the process exits, which is exactly when the progress stops being useful.
+    """
+    print(message, flush=True)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -67,11 +77,22 @@ def parse_args() -> argparse.Namespace:
         "--figure-path",
         default="outputs/figures/visit_stability.png",
     )
+    parser.add_argument(
+        "--rebuild-report",
+        action="store_true",
+        help=(
+            "Redraw the report and figure from the saved table without "
+            "repeating the experiment. Changes no number."
+        ),
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    if args.rebuild_report:
+        rebuild_report(args)
+        return
     seeds = _parse_integers(args.seeds, "seeds")
     budgets = _parse_floats(args.budgets, "budgets")
     factors = _parse_floats(
@@ -89,8 +110,8 @@ def main() -> None:
     factories.update(rare_outcome_model_factories(factors))
 
     rows = []
-    for seed in seeds:
-        print(f"\n=== Honest split seed {seed} ===")
+    for position, seed in enumerate(seeds, start=1):
+        report(f"\n=== Honest split {position}/{len(seeds)}, seed {seed} ===")
         result = run_honest_uplift_experiment(
             dataset,
             model_factories=factories,
@@ -98,7 +119,7 @@ def main() -> None:
             primary_budget=args.primary_budget,
             random_state=seed,
             selection_folds=args.selection_folds,
-            progress=print,
+            progress=report,
         )
         budget_pct = 100.0 * args.primary_budget
         contrast = result.test_contrasts[
@@ -131,10 +152,23 @@ def main() -> None:
                     "response_model", "benchmark_relative_auuc"
                 ],
                 "fit_seconds": result.timing_table["fit_seconds"].sum(),
+                # Carried on every row so the table records the protocol that
+                # produced it. A report rebuilt from the table then describes
+                # the run that happened rather than whatever defaults the
+                # rebuilding command was invoked with.
+                "sample_path": args.sample_path,
+                "models": args.models,
+                "primary_budget": args.primary_budget,
+                "dataset_rows": len(dataset.X),
+                "selection_folds": result.selection_folds,
+                "selection_size": result.selection_size,
             }
         )
 
-    results = pd.DataFrame(rows)
+    write_outputs(args, pd.DataFrame(rows))
+
+
+def summarize_runs(results: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     champion_frequency = (
         results.groupby("champion", as_index=False)
         .agg(
@@ -160,6 +194,58 @@ def main() -> None:
             }
         ]
     )
+    return summary, champion_frequency
+
+
+PROTOCOL_COLUMNS = (
+    "sample_path",
+    "models",
+    "primary_budget",
+    "dataset_rows",
+    "selection_folds",
+    "selection_size",
+)
+
+
+def rebuild_report(args: argparse.Namespace) -> None:
+    """Rewrite the report and figure from the saved table.
+
+    The experiment behind this table takes hours and its wording is the part
+    most likely to need another pass, so redrawing has to be possible without
+    repeating it. The protocol is read from the table rather than from this
+    invocation: falling back to command-line defaults would let a rebuilt
+    report describe a run that never happened.
+    """
+    results_path = ROOT / args.results_path
+    if not results_path.exists():
+        raise SystemExit(f"No saved results at {results_path}.")
+    results = pd.read_csv(results_path)
+    missing = [name for name in PROTOCOL_COLUMNS if name not in results.columns]
+    if missing:
+        raise SystemExit(
+            f"{results_path.name} does not record its own protocol "
+            f"(missing {', '.join(missing)}), so the report cannot be rebuilt "
+            "from it without guessing. Re-run the experiment instead."
+        )
+    write_outputs(args, results, save_table=False)
+
+
+def write_outputs(
+    args: argparse.Namespace,
+    results: pd.DataFrame,
+    save_table: bool = True,
+) -> None:
+    summary, champion_frequency = summarize_runs(results)
+    first = results.iloc[0]
+    protocol = {
+        "sample_path": str(first["sample_path"]),
+        "models": str(first["models"]),
+        "primary_budget": float(first["primary_budget"]),
+        "dataset_rows": int(first["dataset_rows"]),
+        "selection_folds": int(first["selection_folds"]),
+        "selection_size": int(first["selection_size"]),
+        "seeds": ",".join(str(int(value)) for value in results["seed"]),
+    }
 
     prefix = f"criteo_{args.outcome}_honest_stability"
     results_path = ROOT / (
@@ -174,12 +260,13 @@ def main() -> None:
     )
     for path in (results_path, figure_path, report_path):
         path.parent.mkdir(parents=True, exist_ok=True)
-    results.to_csv(results_path, index=False, encoding="utf-8-sig")
+    if save_table:
+        results.to_csv(results_path, index=False, encoding="utf-8-sig")
     plot_stability(results, figure_path)
     report_path.write_text(
         build_report(
             args,
-            len(dataset.X),
+            protocol,
             results,
             summary,
             champion_frequency,
@@ -188,8 +275,8 @@ def main() -> None:
         ),
         encoding="utf-8",
     )
-    print(f"Stability report: {report_path}")
-    print(summary.to_string(index=False))
+    report(f"Stability report: {report_path}")
+    report(summary.to_string(index=False))
 
 
 def summarize_selection(result, budget_pct: float) -> dict:
@@ -351,42 +438,67 @@ def describe_selection_closeness(results: pd.DataFrame) -> str:
         )
     cleared = _numeric_column(results, "n_candidates_with_positive_bound")
     if not cleared.empty:
-        lines.append(
-            f"- Runs in which no candidate reached a positive selection bound: "
-            f"**{int((cleared == 0).sum())} of {len(cleared)}**. The rule still "
-            f"names a champion in those runs, because it ranks candidates rather "
-            f"than requiring one to clear a bar."
-        )
+        starved = int((cleared == 0).sum())
+        if starved:
+            lines.append(
+                f"- Runs in which no candidate reached a positive selection "
+                f"bound: **{starved} of {len(cleared)}**. The rule names a "
+                f"champion anyway, because it ranks candidates rather than "
+                f"requiring one to clear a bar."
+            )
+        else:
+            lines.append(
+                f"- Every run had at least one candidate clear zero, a median "
+                f"of **{cleared.median():.0f}**. The rule ranks rather than "
+                f"requiring a bar to be cleared, so this is a property of the "
+                f"selection sample rather than something the rule enforces."
+            )
+    always_near_top = False
     if not ranks.empty:
+        top_two = int((ranks <= 2).sum())
+        always_near_top = top_two == len(ranks)
         lines.append(
             f"- `s_learner` finished first or second in "
-            f"**{int((ranks <= 2).sum())} of {len(ranks)}** runs "
+            f"**{top_two} of {len(ranks)}** runs "
             f"(median rank {ranks.median():.0f})."
         )
 
-    if not halfwidths.empty and margins.median() < halfwidths.median():
-        verdict = (
-            "The gap between first and second place is smaller than the "
-            "uncertainty attached to first place itself, so the leaderboard "
-            "reorders under resampling without any candidate being measurably "
-            "better. A changing champion here reflects candidates the selection "
-            "sample cannot separate, and the frequency table should be read as "
-            "a ranking tendency rather than as evidence that one architecture "
-            "wins."
-        )
-    else:
-        verdict = (
+    if halfwidths.empty:
+        return "\n".join(lines)
+    if margins.median() >= halfwidths.median():
+        return "\n".join(lines) + "\n\n" + (
             "The gap between first and second place exceeds the uncertainty "
             "attached to first place, so the changes in champion are not "
             "explained by selection noise alone and the ranking is genuinely "
             "sensitive to the split."
+        )
+
+    verdict = (
+        "The gap between first and second place is smaller than the "
+        "uncertainty attached to first place itself, so no candidate is "
+        "measurably better than the one immediately below it."
+    )
+    if always_near_top:
+        verdict += (
+            f" The ordering is not arbitrary either: `{modal_champion}` never "
+            "leaves the top two. Pairwise gaps inside the noise and a stable "
+            "leader are consistent with each other, and together they say the "
+            "sample can rank these candidates without being able to separate "
+            "them. The defensible claim is about the policy class rather than "
+            "about one architecture."
+        )
+    else:
+        verdict += (
+            " A changing champion here reflects candidates the selection "
+            "sample cannot separate, so the frequency table is a ranking "
+            "tendency rather than evidence that one architecture wins."
         )
     return "\n".join(lines) + "\n\n" + verdict
 
 
 def build_report(
     args,
-    dataset_size: int,
+    protocol: dict,
     results: pd.DataFrame,
     summary: pd.DataFrame,
     champion_frequency: pd.DataFrame,
@@ -394,17 +506,30 @@ def build_report(
     figure_path: Path,
 ) -> str:
     selection_note = describe_selection_closeness(results)
+    folds = int(protocol["selection_folds"])
+    size = int(protocol["selection_size"])
+    selection_description = (
+        f"one explicit validation holdout over `{size:,}` observations"
+        if folds == 1
+        else f"`{folds}`-fold out-of-fold predictions over `{size:,}` observations"
+    )
     return f"""# End-to-End Honest-Split Stability: Criteo {args.outcome}
 
 ## Protocol
 
-- Data: `{args.sample_path}` ({dataset_size:,} rows).
-- Seeds: `{args.seeds}`.
-- Primary budget: `{100.0 * args.primary_budget:.2f}%`.
-- Candidate models: `{args.models}`.
+- Data: `{protocol["sample_path"]}` ({int(protocol["dataset_rows"]):,} rows).
+- Seeds: `{protocol["seeds"]}`.
+- Primary budget: `{100.0 * float(protocol["primary_budget"]):.2f}%`.
+- Candidate models: `{protocol["models"]}`.
+- Selection: {selection_description}.
 - Every run repeats training, out-of-sample model selection, development
   refitting, nuisance estimation, and locked-test evaluation.
 - Each run uses the same pre-specified candidate set and selection rule.
+
+The selection stage is the one being measured, so it has to match the run that
+produced the headline champion. A smaller selection sample widens every
+candidate's interval, which would show up here as instability that belongs to
+the sample size rather than to the rule.
 
 ## Aggregate Stability
 
