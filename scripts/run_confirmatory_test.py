@@ -127,6 +127,15 @@ def main() -> None:
         n_test=result.n_test,
         confidence_level=args.confidence_level,
     )
+    # The contrast table names its own reference, so the decision table does not
+    # need a second argument that could disagree with it.
+    decision_table = build_decision_table(
+        result.contrasts,
+        result.policy_values,
+        champion=args.champion,
+        reference=str(result.contrasts["reference_policy"].iloc[0]),
+        n_test=result.n_test,
+    )
 
     report_path = ROOT / args.report_path
     test_table_path = ROOT / args.test_table_path
@@ -151,6 +160,7 @@ def main() -> None:
             result,
             primary_contrast=primary_contrast,
             precision_table=precision_table,
+            decision_table=decision_table,
             figure_path=figure_path,
             test_table_path=test_table_path,
             contrast_path=contrast_path,
@@ -160,6 +170,49 @@ def main() -> None:
 
     print(f"\nConfirmatory report: {report_path}")
     print(result.contrasts.to_string(index=False))
+
+
+def build_decision_table(
+    contrasts: pd.DataFrame,
+    policy_values: pd.DataFrame,
+    champion: str,
+    reference: str,
+    n_test: int,
+) -> pd.DataFrame:
+    """Report each budget the way the decision is actually read.
+
+    The interval answers whether the difference clears zero. Two further things
+    are asked of it in practice: how many standard errors it stands from zero,
+    and how large it is next to what the incumbent already collects at the same
+    budget. Both are derived from columns already in the tables, and deriving
+    them here keeps every figure quoted elsewhere attributable to a file.
+    """
+    champion_rows = contrasts[contrasts["policy"] == champion]
+    reference_values = policy_values[policy_values["policy"] == reference]
+    rows = []
+    for _, contrast in champion_rows.iterrows():
+        standard_error = float(contrast["standard_error_rate"]) * n_test
+        matched = reference_values[
+            np.isclose(
+                reference_values["budget_pct"].to_numpy(dtype=float),
+                float(contrast["budget_pct"]),
+            )
+        ]
+        reference_outcome = float(matched["incremental_outcome"].iloc[0])
+        rows.append(
+            {
+                "budget_pct": contrast["budget_pct"],
+                "difference": contrast["difference"],
+                "ci_lower": contrast["ci_lower"],
+                "ci_upper": contrast["ci_upper"],
+                "z_statistic": contrast["difference"] / standard_error,
+                "reference_incremental_outcome": reference_outcome,
+                "relative_to_reference_pct": (
+                    100.0 * contrast["difference"] / reference_outcome
+                ),
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def build_precision_table(
@@ -256,6 +309,7 @@ def build_report(
     result,
     primary_contrast: pd.Series,
     precision_table: pd.DataFrame,
+    decision_table: pd.DataFrame,
     figure_path: Path,
     test_table_path: Path,
     contrast_path: Path,
@@ -311,6 +365,16 @@ sample {verdict}. The estimated difference is
 `{primary_contrast['difference']:.4f}` incremental {args.outcome} outcomes with a
 `{100.0 * args.confidence_level:.1f}%` interval of
 `[{primary_contrast['ci_lower']:.4f}, {primary_contrast['ci_upper']:.4f}]`.
+
+## Every Budget, As the Decision Reads It
+
+{dataframe_to_markdown(decision_table)}
+
+`z_statistic` is the difference over its own standard error, and
+`relative_to_reference_pct` compares it to what response targeting already
+collects at the same budget. A difference can be large next to the incumbent and
+still not clear zero, or clear zero and be small; both columns are printed so
+neither reading has to be taken on trust.
 
 ## Precision Gained
 

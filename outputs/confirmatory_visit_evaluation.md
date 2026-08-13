@@ -2,13 +2,12 @@
 
 ## Why This Stage Exists
 
-The earlier locked test estimated a positive but inconclusive advantage for
-`s_learner` at the `5.00%` budget. That
-interval was wide because the test partition held only a fifth of a
-one-million-row audit, not because the effect was known to be zero. The source
-experiment has 13,979,592 randomized rows, so the cheapest way to sharpen the
-answer is to spend unused rows on evaluation rather than to re-argue the same
-numbers.
+The earlier locked test evaluated `s_learner` at the
+`5.00%` budget on a fifth of a one-million-row
+audit. An evaluation that size is sensitive enough to implementation detail that
+a single reading of it is thin ground for a decision. The source experiment has
+13,979,592 randomized rows, so the cheapest way to sharpen the answer is to
+spend unused rows on evaluation rather than to re-argue the same numbers.
 
 Nothing is selected here. The champion, the operating budget, the confidence
 level, and the estimator were all locked before this sample was drawn.
@@ -63,6 +62,21 @@ sample confirmed a positive advantage over response targeting at the pre-specifi
 `95.0%` interval of
 `[4850.4956, 6870.8716]`.
 
+## Every Budget, As the Decision Reads It
+
+| budget_pct | difference  | ci_lower     | ci_upper    | z_statistic | reference_incremental_outcome | relative_to_reference_pct |
+| ---------- | ----------- | ------------ | ----------- | ----------- | ----------------------------- | ------------------------- |
+| 5.000000   | 5860.683588 | 4850.495592  | 6870.871585 | 11.370882   | 12432.564588                  | 47.139780                 |
+| 10.000000  | 2950.451187 | 2075.531057  | 3825.371316 | 6.609493    | 20000.855871                  | 14.751625                 |
+| 20.000000  | -421.478770 | -1019.078068 | 176.120527  | -1.382336   | 26623.672379                  | -1.583098                 |
+| 30.000000  | -431.512366 | -908.181981  | 45.157249   | -1.774287   | 27813.121109                  | -1.551470                 |
+
+`z_statistic` is the difference over its own standard error, and
+`relative_to_reference_pct` compares it to what response targeting already
+collects at the same budget. A difference can be large next to the incumbent and
+still not clear zero, or clear zero and be small; both columns are printed so
+neither reading has to be taken on trust.
+
 ## Precision Gained
 
 | stage               | n_evaluated | difference_per_100k | standard_error_per_100k | z_statistic | ci_lower_per_100k | ci_upper_per_100k | excludes_zero | standard_error_reduction |
@@ -93,10 +107,10 @@ share of users.
 
 | stage       | model                   | fit_seconds |
 | ----------- | ----------------------- | ----------- |
-| locked_test | response_model          | 9.766784    |
-| locked_test | random_targeting        | 0.000050    |
-| locked_test | s_learner               | 6.149499    |
-| locked_test | aipw_nuisance_t_learner | 6.863573    |
+| locked_test | response_model          | 10.371037   |
+| locked_test | random_targeting        | 0.000046    |
+| locked_test | s_learner               | 6.849250    |
+| locked_test | aipw_nuisance_t_learner | 8.426420    |
 
 ## Interpretation Boundaries
 
