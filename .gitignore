@@ -12,6 +12,9 @@
 /artifacts/
 /outputs/target_list.csv
 
+# Jupyter writes these beside every notebook that is opened.
+.ipynb_checkpoints/
+
 /.agents/
 /.venv/
 /venv/

@@ -265,6 +265,7 @@ headline. Each is a single script and a single report.
 ## Repository
 
 ```text
+notebooks/   the analysis end to end: exploration, modelling, evaluation
 scripts/     prepare samples, run each experiment, write reports to outputs/
 src/data     Criteo loading, sample provenance, undersampling, semi-synthetic
 src/models   response baseline, 8 learners, random reference, calibrator
@@ -275,6 +276,27 @@ app.py       Streamlit page over that policy
 tests/       67 tests, no data download required
 outputs/     tracked evidence: reports, tables, figures
 docs/        reproducibility notes
+```
+
+## Notebooks
+
+The reasoning behind every decision, in the order it was made, with the charts
+and the intermediate numbers visible.
+
+| Notebook | Covers |
+|---|---|
+| [01_eda.ipynb](notebooks/01_eda.ipynb) | Data integrity, the randomization check, why response probability is the wrong objective, the post-treatment column that has to be excluded, and the duplicate rows that dictate how samples are drawn |
+| [02_modeling.ipynb](notebooks/02_modeling.ipynb) | What can be trained when the label does not exist, the three-stage split, cross-fitting against cross-validation, eight learners from two families, and the selection rule applied end to end |
+| [03_evaluation.ipynb](notebooks/03_evaluation.ipynb) | Why accuracy and AUC do not apply, AIPW checked against a known answer, uplift curves, the confirmatory result, stability across ten repeated splits, the multiplicity adjustment, and the instrumental-variable answer to the exposure question |
+
+They import from `src/` rather than restating it, so a notebook and the locked
+pipeline cannot drift apart. Runs are on development samples so the notebooks
+execute in minutes; every headline figure is read back from `outputs/` and
+labelled as such.
+
+```powershell
+python -m ipykernel install --user --name vinsmart --display-name "Python (vinsmart)"
+python -m jupyter lab notebooks
 ```
 
 ## Using the Locked Policy
@@ -389,11 +411,13 @@ settings that produced it, and each script's `--help` lists its arguments.
 ## Quality Gates
 
 ```powershell
-ruff check src scripts tests
+ruff check .
 pytest tests
 ```
 
-Both run in CI on Python 3.11 and 3.12. No test downloads Criteo data.
+Both run in CI on Python 3.11 and 3.12. No test downloads Criteo data. The lint
+covers the notebooks as well, so the code in them is held to the same standard
+as the code they import.
 
 ## References
 

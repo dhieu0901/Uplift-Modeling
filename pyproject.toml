@@ -31,6 +31,13 @@ ignore = [
     "RUF046",
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# A notebook has to put the repository root on sys.path before it can import
+# from src, so its project imports cannot sit at the top of the cell. The
+# scripts solve this with a file-level noqa; doing it here keeps the notebooks
+# free of lint directives a reader would have to skip past.
+"notebooks/*.ipynb" = ["E402"]
+
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
 known-first-party = ["src"]

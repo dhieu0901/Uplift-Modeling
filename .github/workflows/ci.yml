@@ -29,7 +29,7 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Lint
-        run: ruff check src scripts tests
+        run: ruff check .
 
       - name: Test
         # The suite never touches the Criteo download: every test builds its own
