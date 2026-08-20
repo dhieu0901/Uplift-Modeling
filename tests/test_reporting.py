@@ -5,7 +5,11 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from src.reporting import dataframe_to_markdown, plot_policy_value_curve
+from src.reporting import (
+    dataframe_to_markdown,
+    plot_base_learner_comparison,
+    plot_policy_value_curve,
+)
 
 
 def test_markdown_export_formats_numbers_and_escapes_pipes():
@@ -73,3 +77,52 @@ def test_policy_value_plot_rejects_an_incomplete_table(tmp_path: Path):
 
     with pytest.raises(ValueError, match="missing required columns"):
         plot_policy_value_curve(table, tmp_path / "figure.png")
+
+
+def _comparison_table() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "base_family": family,
+                "policy": policy,
+                "difference": difference,
+                "ci_lower": difference - 40.0,
+                "ci_upper": difference + 40.0,
+            }
+            for family, offsets in (
+                ("gradient_boosting", (90.0, 30.0, -20.0)),
+                ("linear", (10.0, 70.0, -5.0)),
+                ("forest", (55.0, 15.0, 25.0)),
+            )
+            for policy, difference in zip(
+                ("s_learner", "t_learner", "cvt"), offsets, strict=True
+            )
+        ]
+    )
+
+
+def test_base_learner_plot_writes_a_figure(tmp_path: Path):
+    output_path = tmp_path / "nested" / "base_learners.png"
+
+    written = plot_base_learner_comparison(_comparison_table(), output_path)
+
+    assert written == output_path
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+
+def test_base_learner_plot_accepts_a_subset_of_families(tmp_path: Path):
+    """A comparison of two families has to draw, not fail on the missing third."""
+    table = _comparison_table()
+    table = table[table["base_family"] != "forest"]
+
+    written = plot_base_learner_comparison(table, tmp_path / "two.png")
+
+    assert written.exists()
+
+
+def test_base_learner_plot_rejects_an_incomplete_table(tmp_path: Path):
+    table = pd.DataFrame([{"policy": "s_learner", "base_family": "linear"}])
+
+    with pytest.raises(ValueError, match="missing required columns"):
+        plot_base_learner_comparison(table, tmp_path / "figure.png")

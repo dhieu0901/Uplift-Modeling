@@ -21,9 +21,11 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from src.data.criteo import load_criteo, subsample_criteo
-from src.experiments.honest_uplift import run_honest_uplift_experiment
+from src.experiments.honest_uplift import (
+    run_honest_uplift_experiment,
+    summarize_selection,
+)
 from src.models.registry import (
-    REFERENCE_POLICIES,
     rare_outcome_model_factories,
     select_model_factories,
 )
@@ -277,53 +279,6 @@ def write_outputs(
     )
     report(f"Stability report: {report_path}")
     report(summary.to_string(index=False))
-
-
-def summarize_selection(result, budget_pct: float) -> dict:
-    """Record how close the selection was, not just who won.
-
-    A champion that changes across splits can mean two very different things:
-    the rule is unstable, or several candidates are genuinely tied and the
-    rule is picking arbitrarily among equals. Those call for different
-    responses, and the champion name alone cannot tell them apart. Recording
-    the runner-up and the margin does.
-    """
-    contrasts = result.validation_contrasts
-    ranked = contrasts[
-        np.isclose(contrasts["budget_pct"], budget_pct)
-        & contrasts["policy"].isin(
-            [name for name in result.validation_scores if name not in REFERENCE_POLICIES]
-        )
-    ].dropna(subset=["ci_lower"]).sort_values("ci_lower", ascending=False)
-
-    if ranked.empty:
-        return {}
-
-    champion_row = ranked.iloc[0]
-    runner_up = ranked.iloc[1] if len(ranked) > 1 else None
-    order = list(ranked["policy"])
-
-    return {
-        "runner_up": None if runner_up is None else str(runner_up["policy"]),
-        "selection_margin": (
-            float("nan")
-            if runner_up is None
-            else float(champion_row["ci_lower"] - runner_up["ci_lower"])
-        ),
-        "champion_selection_ci_lower": float(champion_row["ci_lower"]),
-        "runner_up_selection_ci_lower": (
-            float("nan") if runner_up is None else float(runner_up["ci_lower"])
-        ),
-        # The margin only means something next to the uncertainty in the
-        # quantity being ranked, so the champion's own interval travels with it.
-        "champion_selection_halfwidth": float(
-            (champion_row["ci_upper"] - champion_row["ci_lower"]) / 2.0
-        ),
-        "n_candidates_with_positive_bound": int((ranked["ci_lower"] > 0).sum()),
-        "s_learner_selection_rank": (
-            order.index("s_learner") + 1 if "s_learner" in order else -1
-        ),
-    }
 
 
 def _parse_strings(value: str) -> list[str]:

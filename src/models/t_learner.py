@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 
-from src.models.base import make_classifier, predict_positive_proba
+from src.models.base import BaseLearnerFamily, predict_positive_proba, resolve_base_family
 
 
 @dataclass
 class TLearner:
     """T-learner: separate outcome models for treated and control users."""
 
-    treated_model: object | None = None
-    control_model: object | None = None
+    treated_model: Any = None
+    control_model: Any = None
+    base_family: BaseLearnerFamily | str | None = None
 
     def fit(
         self,
@@ -21,10 +23,11 @@ class TLearner:
         treatment: pd.Series,
         random_state: int = 42,
     ) -> TLearner:
+        family = resolve_base_family(self.base_family)
         if self.treated_model is None:
-            self.treated_model = make_classifier(random_state=random_state)
+            self.treated_model = family.classifier(random_state)
         if self.control_model is None:
-            self.control_model = make_classifier(random_state=random_state + 1)
+            self.control_model = family.classifier(random_state + 1)
 
         treated_mask = treatment.to_numpy() == 1
         control_mask = ~treated_mask

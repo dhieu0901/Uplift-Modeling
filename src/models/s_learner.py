@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 
-from src.models.base import make_classifier, predict_positive_proba
+from src.models.base import BaseLearnerFamily, predict_positive_proba, resolve_base_family
 
 
 @dataclass
 class SLearner:
     """S-learner: one outcome model with treatment as a feature."""
 
-    model: object | None = None
+    model: Any = None
+    base_family: BaseLearnerFamily | str | None = None
     treatment_column: str = "_treatment"
 
     def fit(
@@ -22,7 +24,7 @@ class SLearner:
         random_state: int = 42,
     ) -> SLearner:
         if self.model is None:
-            self.model = make_classifier(random_state=random_state)
+            self.model = resolve_base_family(self.base_family).classifier(random_state)
         X_fit = self._with_treatment(X, treatment)
         self.model.fit(X_fit, y)
         return self

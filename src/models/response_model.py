@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 
-from src.models.base import make_classifier, predict_positive_proba
+from src.models.base import BaseLearnerFamily, predict_positive_proba, resolve_base_family
 
 
 @dataclass
@@ -15,7 +16,8 @@ class ResponseModel:
     practice of learning who responds among people who received the campaign.
     """
 
-    model: object | None = None
+    model: Any = None
+    base_family: BaseLearnerFamily | str | None = None
     trained_on_treated_only: bool = True
 
     def fit(
@@ -26,7 +28,7 @@ class ResponseModel:
         random_state: int = 42,
     ) -> ResponseModel:
         if self.model is None:
-            self.model = make_classifier(random_state=random_state)
+            self.model = resolve_base_family(self.base_family).classifier(random_state)
 
         if self.trained_on_treated_only:
             if treatment is None:

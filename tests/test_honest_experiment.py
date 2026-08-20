@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -8,6 +10,7 @@ from src.experiments.honest_uplift import (
     evaluate_locked_policies,
     multiplicity_adjusted_bounds,
     select_validation_champion,
+    summarize_selection,
 )
 from src.experiments.splitting import UpliftSplit
 from src.models.registry import select_model_factories
@@ -180,3 +183,93 @@ def _slice_dataset(dataset, start: int, stop: int) -> UpliftSplit:
         treatment=dataset.treatment.iloc[index].reset_index(drop=True),
         indices=index,
     )
+
+
+def _selection_result(rows: list[dict], scores: tuple[str, ...]):
+    """A stand-in carrying only what summarize_selection reads.
+
+    The function is a pure reader over the selection contrasts, so building a
+    full experiment result would spend a minute of fitting to test arithmetic
+    that does not depend on any of it.
+    """
+    return SimpleNamespace(
+        validation_contrasts=pd.DataFrame(rows),
+        validation_scores=dict.fromkeys(scores, np.zeros(1)),
+    )
+
+
+def _selection_rows() -> list[dict]:
+    return [
+        {"policy": "response_model", "budget_pct": 5.0, "ci_lower": 9999.0,
+         "ci_upper": 9999.0},
+        {"policy": "s_learner", "budget_pct": 5.0, "ci_lower": 300.0,
+         "ci_upper": 700.0},
+        {"policy": "t_learner", "budget_pct": 5.0, "ci_lower": 250.0,
+         "ci_upper": 900.0},
+        {"policy": "cvt", "budget_pct": 5.0, "ci_lower": -10.0, "ci_upper": 400.0},
+        {"policy": "s_learner", "budget_pct": 10.0, "ci_lower": -800.0,
+         "ci_upper": 100.0},
+    ]
+
+
+def test_selection_summary_reports_the_margin_against_its_own_uncertainty():
+    result = _selection_result(
+        _selection_rows(),
+        ("response_model", "random_targeting", "s_learner", "t_learner", "cvt"),
+    )
+
+    summary = summarize_selection(result, budget_pct=5.0)
+
+    assert summary["runner_up"] == "t_learner"
+    assert summary["selection_margin"] == pytest.approx(50.0)
+    assert summary["champion_selection_ci_lower"] == pytest.approx(300.0)
+    assert summary["runner_up_selection_ci_lower"] == pytest.approx(250.0)
+    assert summary["champion_selection_halfwidth"] == pytest.approx(200.0)
+    assert summary["n_candidates_with_positive_bound"] == 2
+    assert summary["s_learner_selection_rank"] == 1
+
+
+def test_selection_summary_ignores_reference_policies_and_other_budgets():
+    """The incumbent's own bound must never be ranked against the candidates.
+
+    Its row carries a bound far above every candidate here, so a summary that
+    let it into the ranking would name it champion and hide the real one.
+    """
+    result = _selection_result(
+        _selection_rows(),
+        ("response_model", "random_targeting", "s_learner", "t_learner", "cvt"),
+    )
+
+    summary = summarize_selection(result, budget_pct=5.0)
+
+    assert summary["champion_selection_ci_lower"] == pytest.approx(300.0)
+    assert summary["runner_up"] != "response_model"
+
+
+def test_selection_summary_names_the_tracked_policy_it_was_given():
+    result = _selection_result(
+        _selection_rows(),
+        ("response_model", "s_learner", "t_learner", "cvt"),
+    )
+
+    summary = summarize_selection(result, budget_pct=5.0, tracked_policy="cvt")
+
+    assert summary["cvt_selection_rank"] == 3
+    assert "s_learner_selection_rank" not in summary
+
+
+def test_selection_summary_reports_a_missing_tracked_policy_as_absent():
+    result = _selection_result(
+        _selection_rows(),
+        ("response_model", "s_learner", "t_learner", "cvt"),
+    )
+
+    summary = summarize_selection(result, budget_pct=5.0, tracked_policy="x_learner")
+
+    assert summary["x_learner_selection_rank"] == -1
+
+
+def test_selection_summary_is_empty_when_no_candidate_was_scored():
+    result = _selection_result(_selection_rows(), ("response_model",))
+
+    assert summarize_selection(result, budget_pct=5.0) == {}

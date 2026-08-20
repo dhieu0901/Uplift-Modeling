@@ -5,6 +5,12 @@
 # Generated evidence under /outputs/ IS tracked on purpose: the tables, reports,
 # and figures are the only way a reader can check the numbers in README.md
 # without a multi-hour rerun against a 300 MB source file.
+#
+# The exception is scratch: a smoke test or a shortened run writes here under a
+# leading underscore, and no tracked report starts with one. Without this a
+# throwaway file sits in the evidence directory looking like evidence.
+/outputs/_*
+/outputs/*/_*
 
 # The saved policy is a fitted booster, too large for version control and
 # rebuilt in about a minute by scripts/fit_campaign_policy.py. The measurement
@@ -14,6 +20,10 @@
 
 # Jupyter writes these beside every notebook that is opened.
 .ipynb_checkpoints/
+
+# Scratch for assembling a notebook before it is executed into notebooks/. The
+# committed .ipynb is the artifact; the scaffolding that produced it is not.
+/.nbbuild/
 
 /.agents/
 /.venv/

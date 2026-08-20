@@ -287,6 +287,61 @@ def multiplicity_adjusted_bounds(
     )
 
 
+def summarize_selection(
+    result: HonestUpliftExperimentResult,
+    budget_pct: float,
+    tracked_policy: str = "s_learner",
+) -> dict:
+    """Record how close the selection was, not just who won.
+
+    A champion that changes across runs can mean two very different things:
+    the rule is unstable, or several candidates are genuinely tied and the
+    rule is picking arbitrarily among equals. Those call for different
+    responses, and the champion name alone cannot tell them apart. Recording
+    the runner-up and the margin does.
+
+    ``tracked_policy`` names the candidate whose rank travels with every run,
+    so that a report can say where one learner placed even when it did not
+    win. Its rank is returned under a key named after it.
+    """
+    contrasts = result.validation_contrasts
+    ranked = contrasts[
+        np.isclose(contrasts["budget_pct"], budget_pct)
+        & contrasts["policy"].isin(
+            [name for name in result.validation_scores if name not in REFERENCE_POLICIES]
+        )
+    ].dropna(subset=["ci_lower"]).sort_values("ci_lower", ascending=False)
+
+    if ranked.empty:
+        return {}
+
+    champion_row = ranked.iloc[0]
+    runner_up = ranked.iloc[1] if len(ranked) > 1 else None
+    order = list(ranked["policy"])
+
+    return {
+        "runner_up": None if runner_up is None else str(runner_up["policy"]),
+        "selection_margin": (
+            float("nan")
+            if runner_up is None
+            else float(champion_row["ci_lower"] - runner_up["ci_lower"])
+        ),
+        "champion_selection_ci_lower": float(champion_row["ci_lower"]),
+        "runner_up_selection_ci_lower": (
+            float("nan") if runner_up is None else float(runner_up["ci_lower"])
+        ),
+        # The margin only means something next to the uncertainty in the
+        # quantity being ranked, so the champion's own interval travels with it.
+        "champion_selection_halfwidth": float(
+            (champion_row["ci_upper"] - champion_row["ci_lower"]) / 2.0
+        ),
+        "n_candidates_with_positive_bound": int((ranked["ci_lower"] > 0).sum()),
+        f"{tracked_policy}_selection_rank": (
+            order.index(tracked_policy) + 1 if tracked_policy in order else -1
+        ),
+    }
+
+
 def _candidates_at_budget(
     validation_contrasts: pd.DataFrame,
     candidate_policies: Sequence[str],

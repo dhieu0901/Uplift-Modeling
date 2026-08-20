@@ -57,6 +57,42 @@ bit-identical across `n_jobs` of 1, 8, and -1. Because the equality is exact,
 results do not depend on how many cores the reader has, and the 4.6x speed-up is
 free.
 
+## Random forests are not, and the base learner comparison measures it
+
+`scripts/run_base_learner_comparison.py` runs the same protocol on three base
+learner families, so it also serves as a reproducibility test of each one. Three
+independent executions on the same 1,000,000-row sample, same seed, same three
+folds:
+
+| Base learner family | Largest spread across three runs | Ranks |
+|---|---:|---|
+| `gradient_boosting` | 0 | identical |
+| `linear` | 0 | identical |
+| `forest` | 37.8 incremental outcomes | identical |
+
+The two boosted and linear columns are identical to the last bit. The forest
+column is not. scikit-learn's forests average their trees by accumulating
+predictions into a shared array as worker threads finish, and floating point
+addition is not associative, so the order the threads happen to finish in
+changes the last bits of every score.
+
+The spread is 37.8 against a selection half-width near 441, so it is small
+relative to what the sample can resolve. It is also small relative to the gaps
+between users: all twenty-one selection ranks were identical in all three runs
+and every family picked the same champion each time. The estimate drifts, the
+decision does not.
+
+One derived quantity does move visibly. `margin_over_halfwidth` for the forest
+came out 0.28, 0.37, and 0.31 across the three runs, because it divides a small
+gap by a stable half-width and inherits the drift of both endpoints. It stays
+far below 1 in every run, which is the reading that matters, but it should be
+quoted as a range rather than as a figure.
+
+Passing `n_jobs=1` to the forest would remove the drift at a large cost in
+runtime. This project measured the drift instead and reports it, because the
+forest is a comparison column rather than a production model: no locked policy
+and no published headline depends on it.
+
 ## Known sources of variation
 
 - Different LightGBM major versions can change tree construction. Pin with

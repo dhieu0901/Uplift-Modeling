@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from src.models.base import make_classifier, make_regressor, predict_positive_proba
+from src.models.base import BaseLearnerFamily, predict_positive_proba, resolve_base_family
 
 
 @dataclass
@@ -19,10 +20,11 @@ class XLearner:
     weighting choice.
     """
 
-    treated_outcome_model: object | None = None
-    control_outcome_model: object | None = None
-    treated_effect_model: object | None = None
-    control_effect_model: object | None = None
+    treated_outcome_model: Any = None
+    control_outcome_model: Any = None
+    treated_effect_model: Any = None
+    control_effect_model: Any = None
+    base_family: BaseLearnerFamily | str | None = None
     propensity_: float | None = None
 
     def fit(
@@ -32,14 +34,15 @@ class XLearner:
         treatment: pd.Series,
         random_state: int = 42,
     ) -> XLearner:
+        family = resolve_base_family(self.base_family)
         if self.treated_outcome_model is None:
-            self.treated_outcome_model = make_classifier(random_state=random_state)
+            self.treated_outcome_model = family.classifier(random_state)
         if self.control_outcome_model is None:
-            self.control_outcome_model = make_classifier(random_state=random_state + 1)
+            self.control_outcome_model = family.classifier(random_state + 1)
         if self.treated_effect_model is None:
-            self.treated_effect_model = make_regressor(random_state=random_state + 2)
+            self.treated_effect_model = family.regressor(random_state + 2)
         if self.control_effect_model is None:
-            self.control_effect_model = make_regressor(random_state=random_state + 3)
+            self.control_effect_model = family.regressor(random_state + 3)
 
         treated_mask = treatment.to_numpy() == 1
         control_mask = ~treated_mask

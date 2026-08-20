@@ -1,0 +1,4 @@
+﻿base_family,champion,runner_up,selection_margin,champion_selection_ci_lower,runner_up_selection_ci_lower,champion_selection_halfwidth,n_candidates_with_positive_bound,s_learner_selection_rank,margin_over_halfwidth,wall_seconds
+gradient_boosting,s_learner,transformed_outcome,249.9393059638158,491.50995790171294,241.57065193789714,436.45717133784564,2,1,0.5726548270422319,314.20181110000703
+linear,t_learner,r_learner,319.2970363731348,386.8822213874114,67.58518501427659,437.6661232713104,4,6,0.7295447817312598,141.25099710002542
+forest,x_learner,transformed_outcome,138.0411439307096,117.29266418726127,-20.748479743448343,440.8685054379753,1,3,0.31311182864735226,2673.538208200014

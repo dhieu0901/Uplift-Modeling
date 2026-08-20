@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-
+from src.models.base import BaseLearnerFamily, linear_family
 from src.models.cvt_learner import CVTLearner
 from src.models.dr_learner import DRLearner
 from src.models.modified_outcome import ModifiedOutcomeModel
@@ -31,26 +28,44 @@ REFERENCE_POLICIES = ("response_model", "random_targeting")
 
 def default_model_factories(
     crossfit_folds: int = 5,
+    base_family: BaseLearnerFamily | str | None = None,
 ) -> dict[str, ModelFactory]:
-    """Return fresh factories for the standard response/uplift benchmark."""
+    """Return fresh factories for the standard response/uplift benchmark.
+
+    ``base_family`` names the estimator the uplift candidates are built on, and
+    ``None`` keeps the boosted trees every published result in this repo used.
+
+    It deliberately does not reach the reference policies. ``response_model``
+    stands for what the business already does, so it has to be one fixed bar
+    that every family is measured against rather than a bar that moves with the
+    family under test, and ``random_targeting`` builds no model at all.
+    """
     return {
         "response_model": ResponseModel,
         "random_targeting": RandomTargetingModel,
-        "s_learner": SLearner,
-        "t_learner": TLearner,
-        "x_learner": XLearner,
-        "cvt": CVTLearner,
-        "transformed_outcome": ModifiedOutcomeModel,
-        "r_learner": lambda: RLearner(n_splits=crossfit_folds),
-        "dr_learner": lambda: DRLearner(n_splits=crossfit_folds),
+        "s_learner": lambda: SLearner(base_family=base_family),
+        "t_learner": lambda: TLearner(base_family=base_family),
+        "x_learner": lambda: XLearner(base_family=base_family),
+        "cvt": lambda: CVTLearner(base_family=base_family),
+        "transformed_outcome": lambda: ModifiedOutcomeModel(base_family=base_family),
+        "r_learner": lambda: RLearner(
+            n_splits=crossfit_folds, base_family=base_family
+        ),
+        "dr_learner": lambda: DRLearner(
+            n_splits=crossfit_folds, base_family=base_family
+        ),
     }
 
 
 def select_model_factories(
     names: Iterable[str],
     crossfit_folds: int = 5,
+    base_family: BaseLearnerFamily | str | None = None,
 ) -> dict[str, ModelFactory]:
-    registry = default_model_factories(crossfit_folds=crossfit_folds)
+    registry = default_model_factories(
+        crossfit_folds=crossfit_folds,
+        base_family=base_family,
+    )
     selected_names = list(dict.fromkeys(names))
     unknown = sorted(set(selected_names) - set(registry))
     if unknown:
@@ -97,7 +112,10 @@ def rare_outcome_model_factories(
 
 
 def _scaled_logistic_regression():
-    return make_pipeline(
-        StandardScaler(),
-        LogisticRegression(max_iter=1000),
-    )
+    """The linear family's classifier, which is what these candidates want.
+
+    Undersampling exists here because conversions are rare, and a penalised
+    linear model is the estimator that survives a target that thin. Reading it
+    off the family keeps one definition of what "scaled logistic" means.
+    """
+    return linear_family().classifier()

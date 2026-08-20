@@ -106,9 +106,12 @@ and the value of a targeting policy relative to treating nobody is
 `E[pi(X) * phi]`. AIPW is doubly robust - unbiased if either the outcome models
 or the propensity is right. In a randomized design the propensity is *known*, so
 that condition holds by construction, and the estimate stays unbiased however
-badly the outcome models fit. That is why one LightGBM configuration is fixed
-across all candidates and never tuned: evaluation does not need the nuisance
-models to be good, only to be out of fold.
+badly the outcome models fit. That is why the nuisance models are one fixed
+LightGBM configuration and are never tuned: evaluation does not need them to be
+good, only to be out of fold. The candidates are a separate matter. Their fixed
+configuration is a limit, not a consequence of this argument, and
+[base_learner_comparison.md](outputs/base_learner_comparison.md) measures what
+it costs.
 
 **Paired contrast.** The primary comparison is
 `[pi_uplift(X) - pi_response(X)] * phi`, not the difference of two separately
@@ -128,10 +131,12 @@ at any data. Two policies are always evaluated but can never win:
 estimator - an uninformative policy must collect roughly 5% of the achievable
 effect on a 5% budget; it reads 4.2%).
 
-**Candidates.** Eight learners on one shared LightGBM configuration:
-S-, T-, X-learner (outcome modelling); CVT, transformed-outcome, R-, DR-learner
-(label transformation). CVT needed inverse-propensity reweighting, because its
-classical form assumes a balanced design and this one is 85/15.
+**Candidates.** Seven uplift learners: S-, T-, X-learner (outcome modelling);
+CVT, transformed-outcome, R-, DR-learner (label transformation). Six of them
+share one LightGBM configuration. The seventh, transformed-outcome, uses ridge,
+because at `e = 0.85` its regression target takes only three values and a
+flexible learner fits those spikes. CVT needed inverse-propensity reweighting,
+because its classical form assumes a balanced design and this one is 85/15.
 
 ## Results - Visit
 
@@ -226,6 +231,45 @@ beats response targeting, and the S-learner is the instance that was locked befo
 the confirmatory sample was drawn. These splits overlap, so they are a sensitivity
 analysis rather than ten independent experiments.
 
+## Base Learners
+
+The stability experiment above varies the data and holds the estimator fixed. It
+cannot say whether the champion is a property of the recipe or of the pairing,
+because every published run gave all seven candidates the same boosted trees.
+[base_learner_comparison.md](outputs/base_learner_comparison.md) varies the
+estimator instead, on the same 1,000,000-row sample, the same 3 folds, the same
+seed, and the same 5% budget as the run that chose the locked champion.
+
+| Base learner | Winner | Its selection bound | Rank of S-learner | Winner's margin / its own half-width |
+|---|---|---:|---:|---:|
+| Boosted trees | S-learner | +491.5 | 1 / 7 | 0.57 |
+| Linear | T-learner | +386.9 | 6 / 7 | 0.73 |
+| Random forest | X-learner | +117.3 | 3 / 7 | 0.31 |
+
+**Three estimators, three different winners**, and the S-learner falls to sixth
+of seven under a linear base. That reads worse than it is. In every column the
+gap between first and second place is smaller than the half-width of the
+winner's own interval, so no column separates its winner from its runner-up, and
+the reordering between columns is movement inside the noise rather than evidence
+that one estimator suits one recipe. This is the same conclusion the repeated
+splits reach along the data axis, arrived at independently along the estimator
+axis.
+
+What survives is the policy-class claim: every column's winner clears zero, so
+the case for uplift targeting at a tight budget does not rest on having picked
+the right learner. What does not survive is any claim that the S-learner is best
+of the seven, which was never demonstrated. One ordering is stable across all
+three columns, and it is negative: `cvt` finishes last in every one.
+
+The locked result is untouched. This is a development-stage study on the audit
+sample, and it opens no confirmatory sample: reference policies and the AIPW
+nuisance models stay on boosted trees in every column, so the bar being measured
+against and the ruler doing the measuring are the same in all three.
+
+`forest` is the one column that does not reproduce bit for bit - see
+[determinism.md](docs/determinism.md) for the measurement and why its ranks are
+stable anyway.
+
 ## Exploratory Work
 
 Three side studies, kept because they inform the limits above rather than the
@@ -234,7 +278,7 @@ headline. Each is a single script and a single report.
 - **Ground truth** ([semisynthetic_benchmark.md](outputs/semisynthetic_benchmark.md)) -
   real covariates with a known CATE, so the selection rule can be graded instead
   of trusted. It picked the transformed-outcome learner, which the ground truth
-  confirms as the best of the eight (91.7% of oracle value). One draw, so this
+  confirms as the best of the seven (91.7% of oracle value). One draw, so this
   says the rule is not systematically broken, not that it is reliable.
 - **Calibration** ([conversion_uplift_calibration.md](outputs/conversion_uplift_calibration.md)) -
   isotonic calibration pulls the selected model's slope toward 1 (0.794 to 0.828)
@@ -256,9 +300,14 @@ headline. Each is a single script and a single report.
 - Repeated splits overlap and are a sensitivity analysis, not replication.
 - The conversion result is absence of evidence, not evidence of absence.
 - Semi-synthetic findings depend on the response surface chosen.
-- No hyperparameter tuning, one dataset, one time window. All eight learners
-  share one fixed LightGBM configuration, so the comparison is between these
-  learners *at that configuration* rather than between the learners as such.
+- No hyperparameter tuning, one dataset, one time window. Every learner runs
+  at one fixed configuration of its estimator, so the comparison is between
+  these learners *at those settings* rather than between the learners as
+  such. The estimator itself is no longer part of this limit - the base
+  learner comparison varies it across three families - but the settings
+  inside each family still are. Tuning would have to be nested inside each
+  selection fold to avoid an optimistic interval, which is a larger change
+  than it looks.
 - The exposure estimate assumes assignment moves the outcome only through the
   ad rendering. Reasonable for display advertising, but not testable here.
 
@@ -268,7 +317,7 @@ headline. Each is a single script and a single report.
 notebooks/   the analysis end to end: exploration, modelling, evaluation
 scripts/     prepare samples, run each experiment, write reports to outputs/
 src/data     Criteo loading, sample provenance, undersampling, semi-synthetic
-src/models   response baseline, 8 learners, random reference, calibrator
+src/models   response baseline, 7 uplift learners, base learner families
 src/evaluation  AIPW policy value, uplift curves, calibration, exposure IV
 src/experiments honest splitting and the locked protocol
 src/serving  the locked policy, saved with what it was measured to do
@@ -286,8 +335,9 @@ and the intermediate numbers visible.
 | Notebook | Covers |
 |---|---|
 | [01_eda.ipynb](notebooks/01_eda.ipynb) | Data integrity, the randomization check, why response probability is the wrong objective, the post-treatment column that has to be excluded, and the duplicate rows that dictate how samples are drawn |
-| [02_modeling.ipynb](notebooks/02_modeling.ipynb) | What can be trained when the label does not exist, the three-stage split, cross-fitting against cross-validation, eight learners from two families, and the selection rule applied end to end |
+| [02_modeling.ipynb](notebooks/02_modeling.ipynb) | What can be trained when the label does not exist, the three-stage split, cross-fitting against cross-validation, seven learners from two families, and the selection rule applied end to end |
 | [03_evaluation.ipynb](notebooks/03_evaluation.ipynb) | Why accuracy and AUC do not apply, AIPW checked against a known answer, uplift curves, the confirmatory result, stability across ten repeated splits, the multiplicity adjustment, and the instrumental-variable answer to the exposure question |
+| [04_base_learners.ipynb](notebooks/04_base_learners.ipynb) | A meta-learner is a recipe and the estimator under it is a separate choice, three base learner families, what has to stay fixed for the columns to be comparable, and whether the champion survives changing the estimator |
 
 They import from `src/` rather than restating it, so a notebook and the locked
 pipeline cannot drift apart. Runs are on development samples so the notebooks
@@ -367,6 +417,12 @@ python scripts\run_confirmatory_test.py
 python scripts\run_honest_stability.py `
   --sample-path data/processed/criteo_audit_1m.parquet --selection-folds 3 `
   --models "response_model,s_learner,t_learner,x_learner,cvt,transformed_outcome,r_learner,dr_learner"
+
+# Rebuild every candidate on three different estimators. Sample, folds, and
+# seed match the selection run above. Before comparing anything the script
+# reruns the locked configuration and checks it row for row against the table
+# the run above wrote, so a column can only be read once that anchor matches.
+python scripts\run_base_learner_comparison.py
 
 python scripts\run_exposure_iv.py
 

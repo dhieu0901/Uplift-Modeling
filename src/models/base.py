@@ -1,10 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
-from sklearn.pipeline import Pipeline
+from sklearn.ensemble import (
+    HistGradientBoostingClassifier,
+    HistGradientBoostingRegressor,
+    RandomForestClassifier,
+    RandomForestRegressor,
+)
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 
 def make_classifier(random_state: int = 42, **kwargs: Any):
@@ -71,6 +80,134 @@ def make_regressor(random_state: int = 42, **kwargs: Any):
         }
         params.update({k: v for k, v in kwargs.items() if k in params})
         return HistGradientBoostingRegressor(**params)
+
+
+@dataclass(frozen=True)
+class BaseLearnerFamily:
+    """The estimator pair a meta-learner is built on.
+
+    A meta-learner such as the S-learner or the DR-learner is a recipe for
+    turning ordinary supervised estimators into an effect estimate. The recipe
+    and the estimator it runs on are separate choices. Until this existed the
+    project varied only the recipe, so every ranking it produced was a claim
+    about the recipes *at one estimator* rather than about the recipes
+    themselves.
+
+    Both constructors take a seed and return a fresh estimator, because the
+    learners build their components inside ``fit`` where the run's seed is
+    known. Handing them a pre-built estimator would collapse the distinct seeds
+    a multi-component learner gives its parts.
+    """
+
+    name: str
+    classifier: Callable[[int], Any]
+    regressor: Callable[[int], Any]
+
+
+def gradient_boosting_family() -> BaseLearnerFamily:
+    """Boosted trees: the estimator every published result in this repo used.
+
+    Named for the method rather than the package because ``make_classifier``
+    falls back to sklearn's histogram booster where LightGBM is missing.
+    """
+    return BaseLearnerFamily(
+        name="gradient_boosting",
+        classifier=make_classifier,
+        regressor=make_regressor,
+    )
+
+
+def linear_family() -> BaseLearnerFamily:
+    """Scaled linear models: high bias, low variance, the far end of the range.
+
+    Scaling is not cosmetic here. Both estimators are penalised, and a penalty
+    is only comparable across coefficients when the features share a scale.
+    """
+
+    def classifier(random_state: int = 42):
+        return make_pipeline(
+            StandardScaler(),
+            # The default 100 iterations do not converge on samples this size,
+            # and a warning is not a result, so give lbfgs room to finish.
+            LogisticRegression(max_iter=1000, random_state=random_state),
+        )
+
+    def regressor(random_state: int = 42):
+        del random_state  # Ridge has a closed-form solution.
+        return make_pipeline(StandardScaler(), Ridge(alpha=1.0))
+
+    return BaseLearnerFamily(
+        name="linear",
+        classifier=classifier,
+        regressor=regressor,
+    )
+
+
+def forest_family() -> BaseLearnerFamily:
+    """Bagged deep trees: tree-based like boosting, but a different bias.
+
+    Boosting and bagging disagree about where accuracy comes from. Boosting
+    grows many shallow trees that each correct the last; a forest grows deep
+    independent trees and averages away their variance. Both are here so that a
+    ranking which survives is known to survive the split between them, not just
+    a change of hyperparameter inside one of them.
+
+    ``min_samples_leaf`` is what keeps the trees from growing to purity on
+    samples this size, which would cost hours and return a memorised training
+    set. ``max_features`` is set on both estimators rather than left to the
+    defaults, which differ: the classifier would take the square root of the
+    feature count and the regressor would take all of them, so a forest
+    S-learner and a forest X-learner would not be the same kind of forest.
+    """
+
+    def classifier(random_state: int = 42):
+        return RandomForestClassifier(
+            n_estimators=200,
+            min_samples_leaf=50,
+            max_features="sqrt",
+            n_jobs=-1,
+            random_state=random_state,
+        )
+
+    def regressor(random_state: int = 42):
+        return RandomForestRegressor(
+            n_estimators=200,
+            min_samples_leaf=50,
+            max_features="sqrt",
+            n_jobs=-1,
+            random_state=random_state,
+        )
+
+    return BaseLearnerFamily(
+        name="forest",
+        classifier=classifier,
+        regressor=regressor,
+    )
+
+
+#: Every family the base-learner comparison can draw from, by name.
+BASE_LEARNER_FAMILIES: dict[str, Callable[[], BaseLearnerFamily]] = {
+    "gradient_boosting": gradient_boosting_family,
+    "linear": linear_family,
+    "forest": forest_family,
+}
+
+
+def resolve_base_family(family: BaseLearnerFamily | str | None) -> BaseLearnerFamily:
+    """Return the family to build a learner's components from.
+
+    ``None`` returns the boosted-tree family, so a learner given no family
+    behaves exactly as it did before families existed. Every number already
+    published by this project was produced on that path.
+    """
+    if family is None:
+        return gradient_boosting_family()
+    if isinstance(family, BaseLearnerFamily):
+        return family
+    if family not in BASE_LEARNER_FAMILIES:
+        known = ", ".join(sorted(BASE_LEARNER_FAMILIES))
+        raise ValueError(f"Unknown base learner family {family!r}. Known: {known}.")
+    return BASE_LEARNER_FAMILIES[family]()
 
 
 def predict_positive_proba(model, X) -> np.ndarray:

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+
+from src.models.base import BaseLearnerFamily, resolve_base_family
 
 
 @dataclass
@@ -27,7 +30,8 @@ class ModifiedOutcomeModel:
     penalty cannot.
     """
 
-    model: object | None = None
+    model: Any = None
+    base_family: BaseLearnerFamily | str | None = None
     alpha: float = 1.0
     propensity_: float | None = None
 
@@ -38,7 +42,6 @@ class ModifiedOutcomeModel:
         treatment: pd.Series,
         random_state: int = 42,
     ) -> ModifiedOutcomeModel:
-        del random_state  # Ridge is deterministic.
         treatment_values = treatment.to_numpy(dtype=float)
         self.propensity_ = float(treatment_values.mean())
         if not 0.0 < self.propensity_ < 1.0:
@@ -51,10 +54,18 @@ class ModifiedOutcomeModel:
         ) / (self.propensity_ * (1.0 - self.propensity_))
 
         if self.model is None:
-            self.model = make_pipeline(
-                StandardScaler(),
-                Ridge(alpha=self.alpha),
-            )
+            if self.base_family is None:
+                # Ridge is deliberate here, for the reason in the class
+                # docstring, and stays the default so the published
+                # transformed-outcome numbers reproduce unchanged. Naming a
+                # family overrides it, which is how the base-learner comparison
+                # puts that reasoning to the test.
+                self.model = make_pipeline(
+                    StandardScaler(),
+                    Ridge(alpha=self.alpha),
+                )
+            else:
+                self.model = resolve_base_family(self.base_family).regressor(random_state)
         self.model.fit(X, transformed_outcome)
         return self
 

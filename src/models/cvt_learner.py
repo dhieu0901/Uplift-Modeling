@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from src.models.base import (
+    BaseLearnerFamily,
     fit_with_sample_weight,
-    make_classifier,
     predict_positive_proba,
+    resolve_base_family,
 )
 
 
@@ -26,7 +28,8 @@ class CVTLearner:
     to create a pseudo-population with equally weighted treatment arms.
     """
 
-    model: object | None = None
+    model: Any = None
+    base_family: BaseLearnerFamily | str | None = None
     rebalance_treatment: bool = True
     propensity_: float | None = None
 
@@ -43,7 +46,7 @@ class CVTLearner:
             raise ValueError("CVT requires both treatment and control observations.")
 
         if self.model is None:
-            self.model = make_classifier(random_state=random_state)
+            self.model = resolve_base_family(self.base_family).classifier(random_state)
 
         transformed_class = (y.to_numpy(dtype=int) == treatment_values).astype(int)
         sample_weight = None

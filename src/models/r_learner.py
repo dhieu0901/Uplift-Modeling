@@ -2,11 +2,16 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from src.models.base import make_classifier, make_regressor
+from src.models.base import (
+    BaseLearnerFamily,
+    fit_with_sample_weight,
+    resolve_base_family,
+)
 from src.models.cross_fitting import cross_fitted_potential_outcomes
 
 
@@ -25,8 +30,9 @@ class RLearner:
     nuisance m(x), and the final regression minimizes the R-loss.
     """
 
-    effect_model: object | None = None
-    outcome_model_factory: Callable[[int], object] | None = None
+    effect_model: Any = None
+    outcome_model_factory: Callable[[int], Any] | None = None
+    base_family: BaseLearnerFamily | str | None = None
     n_splits: int = 5
     propensity_: float | None = None
 
@@ -42,9 +48,8 @@ class RLearner:
         if not 0.0 < self.propensity_ < 1.0:
             raise ValueError("R-learner requires both treatment arms.")
 
-        outcome_model_factory = self.outcome_model_factory or (
-            lambda seed: make_classifier(random_state=seed)
-        )
+        family = resolve_base_family(self.base_family)
+        outcome_model_factory = self.outcome_model_factory or family.classifier
         mu0, mu1 = cross_fitted_potential_outcomes(
             X,
             y,
@@ -63,8 +68,11 @@ class RLearner:
         sample_weight = treatment_residual**2
 
         if self.effect_model is None:
-            self.effect_model = make_regressor(random_state=random_state + 1000)
-        self.effect_model.fit(X, pseudo_outcome, sample_weight=sample_weight)
+            self.effect_model = family.regressor(random_state + 1000)
+        # The R-loss weights are not optional, so the fit has to go through the
+        # adapter: a scaled linear effect model is a pipeline, and a pipeline
+        # only takes a sample weight addressed to its final step.
+        fit_with_sample_weight(self.effect_model, X, pseudo_outcome, sample_weight)
         return self
 
     def predict_uplift(self, X: pd.DataFrame) -> np.ndarray:
