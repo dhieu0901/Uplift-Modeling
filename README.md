@@ -47,6 +47,21 @@ measured in [sample_provenance.md](outputs/sample_provenance.md).
 Randomization is the load-bearing property: without it, every causal estimate
 would rest on an untestable "all confounders controlled" assumption.
 
+**The feature set is the twelve columns as they arrive.** `f0` to `f11` are
+anonymised floats, so there is no domain meaning to build on and none is
+assumed. Nothing is derived, binned, or dropped. That is a decision, not an
+omission: the candidates are trees, which are invariant to any monotone
+rescaling, and inventing interactions for columns whose meaning is unknown adds
+degrees of freedom without adding information. The distributions are far from
+tidy - on the development sample `f1` takes 23 distinct values and `f11` has a
+skew of -14.8 - which is an argument for trees rather than an argument for
+cleaning. Where scaling does matter the estimator handles it: the linear base
+learner standardises inside its own pipeline, so the transform is fitted per
+fold and cannot leak. All twelve are pre-treatment, and the balance check
+confirms it - the largest absolute standardised mean difference between arms is
+0.0451, against the 0.1 that is usually treated as meaningful
+([01_eda.ipynb](notebooks/01_eda.ipynb)).
+
 **One column is excluded.** `exposure` records whether the ad actually rendered,
 which is decided *after* assignment. On the development sample, visit rate is
 41.97% among exposed users against 3.52% among treated-but-unexposed - an ad
@@ -322,7 +337,7 @@ src/evaluation  AIPW policy value, uplift curves, calibration, exposure IV
 src/experiments honest splitting and the locked protocol
 src/serving  the locked policy, saved with what it was measured to do
 app.py       Streamlit page over that policy
-tests/       67 tests, no data download required
+tests/       114 tests, no data download required
 outputs/     tracked evidence: reports, tables, figures
 docs/        reproducibility notes
 ```
