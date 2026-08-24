@@ -45,6 +45,21 @@ def _fit_uplift(model, dataset: CriteoDataset) -> np.ndarray:
     return np.asarray(model.predict_uplift(dataset.X), dtype=float)
 
 
+#: Tolerance for "these two paths compute the same thing".
+#:
+#: Not bit equality. LightGBM only promises reproducible sums under
+#: ``deterministic=true``, which this project does not set, so two identical
+#: fits can disagree in the last bit depending on how the machine schedules
+#: threads. That was observed: the same commit passed on one CI interpreter and
+#: failed on another with a largest absolute difference of 4.4e-16.
+#:
+#: This bound sits far above that noise and far below any real regression. A
+#: wrong seed, a dropped sample weight, or a swapped estimator moves an uplift
+#: score by 1e-3 or more, which is six orders of magnitude outside this window.
+#: See ``docs/determinism.md``.
+SAME_SCORES = {"rtol": 1e-9, "atol": 1e-12}
+
+
 #: Each learner built two ways: left through the family default, right by hand.
 #: The right-hand side names the estimators and the seeds the learners used
 #: before base learner families existed, so a difference between the two sides
@@ -113,9 +128,10 @@ def test_default_learner_matches_the_hand_built_boosted_learner(
     dataset = small_uplift_dataset.dataset
     through_family, hand_built = LEARNER_PAIRS[learner_name]()
 
-    np.testing.assert_array_equal(
+    np.testing.assert_allclose(
         _fit_uplift(through_family, dataset),
         _fit_uplift(hand_built, dataset),
+        **SAME_SCORES,
     )
 
 
@@ -124,9 +140,10 @@ def test_naming_the_boosted_family_is_the_same_as_naming_nothing(
 ) -> None:
     dataset = small_uplift_dataset.dataset
 
-    np.testing.assert_array_equal(
+    np.testing.assert_allclose(
         _fit_uplift(SLearner(), dataset),
         _fit_uplift(SLearner(base_family="gradient_boosting"), dataset),
+        **SAME_SCORES,
     )
 
 

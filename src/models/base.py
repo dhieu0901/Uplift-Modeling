@@ -22,9 +22,12 @@ def make_classifier(random_state: int = 42, **kwargs: Any):
     LightGBM is preferred for the project. The sklearn fallback keeps the repo
     runnable in a fresh environment where LightGBM has not been installed yet.
 
-    ``n_jobs=-1`` is safe for reproducibility here: LightGBM's histogram
-    construction is deterministic in the thread count, so predictions are
-    bit-identical across 1, 8, and all cores. See ``docs/determinism.md``.
+    ``n_jobs=-1`` costs nothing measurable in reproducibility here: on this
+    project's data and parameters, predictions are bit-identical across 1, 8,
+    and all cores. That is a measurement on one machine and one LightGBM build,
+    not a guarantee - LightGBM only promises stable sums under
+    ``deterministic=true``, which this project does not set because turning it
+    on would move every published number. See ``docs/determinism.md``.
     """
     try:
         from lightgbm import LGBMClassifier

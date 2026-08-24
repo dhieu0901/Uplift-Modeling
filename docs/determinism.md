@@ -48,14 +48,32 @@ data or the protocol different between them. A 200,000-row evaluation cannot
 resolve an effect this size, which is why the four-million-row confirmatory
 sample exists.
 
-## LightGBM is deterministic in the thread count
+## LightGBM is stable in the thread count on the machine that was measured
 
 `src/models/base.py` fits with `n_jobs=-1`. Parallel histogram construction is a
 common source of run-to-run drift, so this was measured rather than assumed: on
 400,000 audit rows with the project's own parameters, predictions are
-bit-identical across `n_jobs` of 1, 8, and -1. Because the equality is exact,
-results do not depend on how many cores the reader has, and the 4.6x speed-up is
-free.
+bit-identical across `n_jobs` of 1, 8, and -1. The 4.6x speed-up is therefore
+free on this machine.
+
+That is a measurement, not a guarantee, and the difference matters. LightGBM
+only promises reproducible sums under `deterministic=true`, which this project
+does not set: turning it on changes how histograms are built and would move
+every number already published. Without it, two identical fits are free to
+disagree in the last bit depending on how the machine schedules its threads.
+
+CI showed exactly that. One commit ran the same equality test on two
+interpreters in the same workflow; it passed on 3.12 and failed on 3.11, on the
+R-learner, with a largest absolute difference of `4.4e-16` and a largest
+relative difference of `2.0e-14` across 3,000 scored users. Nothing about the
+code differed between the two.
+
+So the guard in `tests/test_base_family.py` asserts a tolerance rather than bit
+equality. The tolerance is `rtol=1e-9`, roughly five orders of magnitude above
+the noise that was observed and six below the smallest regression it is there to
+catch: a wrong seed, a dropped sample weight, or a swapped estimator moves an
+uplift score by `1e-3` or more. The published tables are unaffected, because
+each was produced by one run on one machine rather than by comparing two.
 
 ## Random forests are not, and the base learner comparison measures it
 
