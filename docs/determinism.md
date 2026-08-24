@@ -1,7 +1,16 @@
 # Reproducibility Notes
 
 Every number in `README.md` is recoverable from the commands in its Reproduction
-section. Three details make that true rather than aspirational.
+section. What follows is what makes that true rather than aspirational, and,
+just as important, where it stops being exactly true.
+
+Sampling and seeding are exact by construction, so the same commands read the
+same rows and fit the same models. The estimators are a different matter and are
+treated separately below: gradient boosting reproduced bit for bit everywhere it
+was measured but is not promised to, and random forests visibly do not. In both
+cases the drift is far below what the samples can resolve, and no ranking or
+champion moved because of it - which is the property the results actually rest
+on, and the reason each is measured here rather than assumed.
 
 ## Sampling is seeded in the database, and rows have identities
 
