@@ -6,7 +6,7 @@ the campaign?
 
 On four million randomized users never touched by training or model selection,
 uplift targeting delivers **+5,861 incremental visits at a 5% budget
-(95% CI [4,851, 6,871]), 47% above the response-targeting incumbent**.
+(95% CI [4,850, 6,871]), 47% above the response-targeting incumbent**.
 
 Two limits come with that number. The advantage is gone by a 20% budget. And
 for the rarer conversion outcome the same protocol reaches no conclusion at all.
@@ -19,7 +19,7 @@ produced it.
 
 | Question | Decision | Evidence |
 |---|---|---|
-| Visit targeting | Adopt uplift targeting at 5%, then confirm live | +5,861 visits [4,851, 6,871] on 4M untouched users, z = 11.4 |
+| Visit targeting | Adopt uplift targeting at 5%, then confirm live | +5,861 visits [4,850, 6,871] on 4M untouched users, z = 11.4 |
 | Which model | Treat the S-learner as one acceptable instance, not the proven best | Two independent tests agree. Varying the data, it wins 8 of 10 repeated splits and never leaves the top two. Varying the estimator underneath it, three base learners crown three different winners and it falls to 6th of 7 on a linear base. Neither test separates a winner from its runner-up |
 | Budget | Keep it tight | +47% at 5%, +15% at 10%, no measurable advantage at 20% or 30% |
 | Conversion | Keep response targeting | No interval excludes zero at any budget - no case for switching either way |
@@ -181,7 +181,7 @@ Confirmatory test on 4,000,000 untouched rows, opened once
 
 | Budget | S-learner minus response | 95% CI | z | Relative |
 |---:|---:|---:|---:|---:|
-| **5%** | **+5,861** | **[4,851, 6,871]** | **11.37** | **+47.1%** |
+| **5%** | **+5,861** | **[4,850, 6,871]** | **11.37** | **+47.1%** |
 | 10% | +2,950 | [2,076, 3,825] | 6.61 | +14.8% |
 | 20% | -421 | [-1,019, 176] | -1.38 | -1.6% |
 | 30% | -432 | [-908, 45] | -1.77 | -1.6% |
@@ -519,8 +519,16 @@ python scripts\design_online_experiment.py `
 Every report in `outputs/` opens with the settings that produced it, under a
 heading named for what those settings are: a locked protocol for a selection
 run, a data-generating process for the semi-synthetic study, sample-size
-assumptions for the online design. Each script's `--help` lists its arguments,
-and the commands above carry the seed each run was given.
+assumptions for the online design. Every run that takes a seed records it
+there, which matters more here than it looks: `docs/determinism.md` shows two
+seeding conventions moving the same estimate from spanning zero to not spanning
+it. Each script's `--help` lists its arguments.
+
+This chain has been executed end to end from a clean clone into a fresh
+environment, and 19 of the 22 tracked tables rebuilt identically. The three that
+did not are accounted for in
+[determinism.md](docs/determinism.md), along with the two defects the exercise
+found.
 
 ## Quality Gates
 

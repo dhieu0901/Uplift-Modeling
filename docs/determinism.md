@@ -120,6 +120,46 @@ runtime. This project measured the drift instead and reports it, because the
 forest is a comparison column rather than a production model: no locked policy
 and no published headline depends on it.
 
+## The whole chain was run from a clean checkout
+
+The claims above are about individual estimators. This one is about the
+Reproduction section as a whole, and it was executed rather than asserted: a
+fresh `git clone` from the remote, a new virtual environment, `pip install -r
+requirements.lock.txt`, then every command in the README in its documented
+order.
+
+| Outcome | Tables |
+|---|---:|
+| Rebuilt and identical to within `1e-6` | 19 |
+| Rebuilt and different | 3 |
+
+All three differences are accounted for:
+
+- `visit_stability.csv` differs by `2.8e-14` on a bound, which is float
+  round-off on counts in the hundreds and inside the tolerance above.
+- `base_learner_comparison.csv` and its summary differ by `12.9` on one bound,
+  entirely in the `forest` column. The `gradient_boosting` and `linear` columns
+  are identical to the last bit, all twenty-one ranks match, and every family
+  picked the same champion. That is a fourth independent confirmation of the
+  forest result recorded above, this time on a different interpreter and a
+  different set of installed versions.
+- `sample_provenance.csv` differed only in a column recording the absolute path
+  of the machine that produced it. That was a defect rather than a variation,
+  and the table now records paths relative to the repository root.
+
+The run also found two defects that no amount of reading would have caught.
+`requirements.lock.txt` did not resolve at all, because the pinned streamlit
+capped numpy below 2 and pandas below 3 against pins of numpy 2.4.4 and pandas
+3.0.2, so the first command in the Reproduction section failed on any machine
+that did not already have the packages. And `ruff check .` was silently skipping
+`src/data/`, because the exclusion written for the dataset directory matched any
+directory named `data` at any depth. Both are fixed.
+
+Every step except the repeated splits totalled 84 minutes of compute. The
+repeated-splits step is the dominant remaining cost; its wall clock is not
+quoted here because the machine slept twice during it, which inflates the
+number without reflecting any work.
+
 ## Known sources of variation
 
 - Different LightGBM major versions can change tree construction. Pin with
