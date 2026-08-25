@@ -157,7 +157,8 @@ because its classical form assumes a balanced design and this one is 85/15.
 
 ## Results - Visit
 
-Selection on 800,000 out-of-fold development rows at the 5% budget:
+Selection on 800,000 out-of-fold development rows at the 5% budget
+([audit_visit_evaluation.md](outputs/audit_visit_evaluation.md)):
 
 | Candidate | vs response | 95% CI |
 |---|---:|---:|
@@ -175,7 +176,8 @@ not pay: in the runtime table of that report, R- and DR-learner cost 32 to 57
 seconds per selection fold on five-fold cross-fitting and land mid-table, while
 a ridge regression at 0.23 s nearly matches them.
 
-Confirmatory test on 4,000,000 untouched rows, opened once:
+Confirmatory test on 4,000,000 untouched rows, opened once
+([confirmatory_visit_evaluation.md](outputs/confirmatory_visit_evaluation.md)):
 
 | Budget | S-learner minus response | 95% CI | z | Relative |
 |---:|---:|---:|---:|---:|
@@ -216,7 +218,8 @@ shown to be worse. This sample cannot separate the two.
 
 ## Stability
 
-Ten complete repetitions of the protocol, on the same 1,000,000-row sample and
+Ten complete repetitions of the protocol
+([visit_stability.md](outputs/visit_stability.md)), on the same 1,000,000-row sample and
 with the same 3-fold out-of-fold selection that chose the champion. The
 selection stage is what is being measured, so it has to match: a smaller
 selection sample widens every candidate's interval and would show up here as
@@ -330,8 +333,9 @@ headline. Each is a single script and a single report.
   not the same size. The visible part is multiplicity: the selection rule keeps
   the largest lower bound over its candidates, so more candidates means a wider
   Bonferroni correction. That part is cheap. Applying the adjustment this
-  repository already reports to the champion's selection figures (+928.0 with a
-  standard error of 222.7), the bound holds at +328.9 over 7 candidates, +163.3
+  repository already reports to the champion's selection figures in
+  [audit_visit_selection.csv](outputs/tables/audit_visit_selection.csv) (+928.0
+  against response targeting, standard error 222.7), the bound holds at +328.9 over 7 candidates, +163.3
   over a 12-point grid for each, and +83.3 over a 48-point grid for each. It
   takes roughly 1,600 candidates before the bound reaches zero.
 
