@@ -324,9 +324,23 @@ headline. Each is a single script and a single report.
   these learners *at those settings* rather than between the learners as
   such. The estimator itself is no longer part of this limit - the base
   learner comparison varies it across three families - but the settings
-  inside each family still are. Tuning would have to be nested inside each
-  selection fold to avoid an optimistic interval, which is a larger change
-  than it looks.
+  inside each family still are.
+
+  What tuning would cost is worth separating into two parts, because they are
+  not the same size. The visible part is multiplicity: the selection rule keeps
+  the largest lower bound over its candidates, so more candidates means a wider
+  Bonferroni correction. That part is cheap. Applying the adjustment this
+  repository already reports to the champion's selection figures (+928.0 with a
+  standard error of 222.7), the bound holds at +328.9 over 7 candidates, +163.3
+  over a 12-point grid for each, and +83.3 over a 48-point grid for each. It
+  takes roughly 1,600 candidates before the bound reaches zero.
+
+  The expensive part is the one no correction repairs. Tuning is a *selection*
+  step, so it has to sit inside each selection fold, choosing on the fold's
+  training rows and never on the rows the fold is scored with. Tuning once over
+  the whole development set and only then splitting produces a bound that is
+  optimistic no matter how it is adjusted afterwards. That nesting, not the
+  correction, is what makes tuning a larger change than it looks.
 - The exposure estimate assumes assignment moves the outcome only through the
   ad rendering. Reasonable for display advertising, but not testable here.
 
@@ -389,7 +403,15 @@ that no sample supports.
 
 ## Reproduction
 
-Python 3.11 or 3.12. Place the Criteo dataset at `data/criteo-uplift-v2.1.csv.gz`.
+Python 3.11 or 3.12. The source is the Criteo Uplift Prediction Dataset v2.1,
+released by Criteo AI Lab and available from
+[its dataset page](https://ailab.criteo.com/criteo-uplift-prediction-dataset/)
+under the terms stated there. It is not redistributed here. Place the download
+at `data/criteo-uplift-v2.1.csv.gz`; the file the numbers below were produced
+from is 311,422,618 bytes with SHA-256
+`2716e1bf0fd157a93b5bf86924d9088419dfbac2022c6cd90030220634f616dc`, so a reader
+who gets a different digest is reading a different file and should expect
+different numbers.
 
 ```powershell
 python -m pip install -r requirements.lock.txt
