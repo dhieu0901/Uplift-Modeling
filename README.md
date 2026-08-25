@@ -377,10 +377,19 @@ pipeline cannot drift apart. Runs are on development samples so the notebooks
 execute in minutes; every headline figure is read back from `outputs/` and
 labelled as such.
 
+They read the sample files, so run the sample-building commands in
+[Reproduction](#reproduction) before opening them. Every notebook is stored with
+its outputs, so the reasoning and the numbers can be read without running
+anything.
+
 ```powershell
 python -m ipykernel install --user --name vinsmart --display-name "Python (vinsmart)"
 python -m jupyter lab notebooks
 ```
+
+Each notebook is saved against the `vinsmart` kernel that the first command
+installs, which binds them to this project's environment rather than to whatever
+Jupyter would otherwise pick.
 
 ## Using the Locked Policy
 
@@ -392,7 +401,8 @@ from.
 ```powershell
 python scripts\fit_campaign_policy.py          # fit once, save to artifacts/
 python scripts\score_campaign.py --budget 0.05 # rank users, write the list
-python -m streamlit run app.py                 # the same thing with a budget slider
+python -m streamlit run app.py                 # the same thing with a budget slider,
+                                               # plus the base learner comparison
 ```
 
 Two things it will not do. It does not measure lift on the users passed in: a
