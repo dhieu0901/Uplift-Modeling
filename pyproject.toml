@@ -7,7 +7,10 @@ requires-python = ">=3.11"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = [".venv", "data", "outputs"]
+# Anchored to the repository root with a leading slash. Without it, "data"
+# matches any directory of that name at any depth, which silently excluded
+# src/data/ from every lint run including the one CI gates on.
+extend-exclude = ["/.venv", "/data", "/outputs"]
 
 [tool.ruff.lint]
 select = [

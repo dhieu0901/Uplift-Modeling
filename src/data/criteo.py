@@ -4,10 +4,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
-
 
 CRITEO_FEATURE_COLUMNS = [f"f{i}" for i in range(12)]
 CRITEO_REQUIRED_COLUMNS = [
