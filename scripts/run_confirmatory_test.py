@@ -349,6 +349,7 @@ level, and the estimator were all locked before this sample was drawn.
 - Treatment propensity used by AIPW: `{result.propensity:.6f}`.
 - Primary budget `{100.0 * args.primary_budget:.2f}%`, confidence level
   `{100.0 * args.confidence_level:.1f}%`.
+- Random seed: `{args.random_state}`, the same one the selection run used.
 
 ## Policy Value
 

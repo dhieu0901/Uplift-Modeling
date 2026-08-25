@@ -274,6 +274,8 @@ def build_report(
 - Realized average CATE: `{synthetic.true_cate.mean():.6f}`.
 - CATE standard deviation: `{synthetic.true_cate.std():.6f}`.
 - Treatment propensity: `{args.treatment_propensity:.4f}`.
+- Random seed: `{args.random_state}`, which fixes the response surfaces,
+  the treatment draw, and every model fitted below.
 - The response surfaces contain nonlinear terms and feature interactions.
 - Treatment is randomized and both potential-outcome probabilities are known.
 

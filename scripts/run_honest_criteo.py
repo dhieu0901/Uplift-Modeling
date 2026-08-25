@@ -335,6 +335,8 @@ def build_report(
   `{result.selection_size:,}` selection observations.
 - Primary targeting budget: `{100.0 * args.primary_budget:.2f}%`.
 - Confidence level: `{100.0 * args.confidence_level:.1f}%`.
+- Random seed: `{args.random_state}`. Every model seed is derived from it
+  and the model's name, so the run is a function of this number alone.
 - Candidate model and hyperparameter selection uses {selection_description};
   locked-test outcomes are excluded.
 - The champion is the candidate with the largest paired AIPW lower confidence

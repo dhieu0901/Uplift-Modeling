@@ -516,8 +516,11 @@ python scripts\design_online_experiment.py `
   --budget-pct 5.0 --no-campaign-rate 0.038333
 ```
 
-The protocol block at the top of every report in `outputs/` records the exact
-settings that produced it, and each script's `--help` lists its arguments.
+Every report in `outputs/` opens with the settings that produced it, under a
+heading named for what those settings are: a locked protocol for a selection
+run, a data-generating process for the semi-synthetic study, sample-size
+assumptions for the online design. Each script's `--help` lists its arguments,
+and the commands above carry the seed each run was given.
 
 ## Quality Gates
 
