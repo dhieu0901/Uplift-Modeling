@@ -18,8 +18,15 @@ joblib==1.5.2
 # already computed and produces none of its own, so its version cannot move a
 # result. The notebook stack is here for the same reason: it runs the analysis
 # in src/ rather than restating it.
-streamlit==1.32.0
-jupyter==1.0.0
+#
+# 1.62.0 is a floor rather than a preference. Earlier releases cap numpy below
+# 2 or pandas below 3, either of which contradicts the pins above and makes the
+# whole file unresolvable. A machine can end up holding an older streamlit
+# beside numpy 2 if the two were installed at different times, but pip will
+# never build that state from this file, so the pin has to be one pip can
+# actually satisfy.
+streamlit==1.62.0
+jupyter==1.1.1
 ipykernel==6.29.5
 nbformat==5.9.2
 nbconvert==7.10.0
