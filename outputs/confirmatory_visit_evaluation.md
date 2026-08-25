@@ -23,6 +23,7 @@ level, and the estimator were all locked before this sample was drawn.
 - Treatment propensity used by AIPW: `0.850017`.
 - Primary budget `5.00%`, confidence level
   `95.0%`.
+- Random seed: `20260730`, the same one the selection run used.
 
 ## Policy Value
 
@@ -107,10 +108,10 @@ share of users.
 
 | stage       | model                   | fit_seconds |
 | ----------- | ----------------------- | ----------- |
-| locked_test | response_model          | 10.371037   |
-| locked_test | random_targeting        | 0.000046    |
-| locked_test | s_learner               | 6.849250    |
-| locked_test | aipw_nuisance_t_learner | 8.426420    |
+| locked_test | response_model          | 7.951492    |
+| locked_test | random_targeting        | 0.000100    |
+| locked_test | s_learner               | 5.374211    |
+| locked_test | aipw_nuisance_t_learner | 5.868138    |
 
 ## Interpretation Boundaries
 

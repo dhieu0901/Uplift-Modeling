@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass
+from itertools import combinations
 from pathlib import Path
 
 import pandas as pd
-
-from collections.abc import Mapping
-from itertools import combinations
 
 from src.data.criteo import (
     _import_duckdb,
@@ -45,6 +44,25 @@ class SampleSummary:
     standard_error_pp: float
 
 
+#: The repository root, used to record sample paths relative to it.
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _portable_path(path: str | Path) -> str:
+    """Record a sample by where it sits in the repository, not on this disk.
+
+    An absolute path is a property of the machine that ran the script, so
+    writing one into a tracked evidence table guarantees that table can never
+    reproduce and leaks the local directory layout for no benefit. A path
+    outside the repository has no relative form and is kept as given.
+    """
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(_REPOSITORY_ROOT).as_posix()
+    except ValueError:
+        return resolved.as_posix()
+
+
 def summarise_sample(name: str, path: str | Path) -> SampleSummary:
     """Measure size, assignment balance, outcome rates, and the visit effect.
 
@@ -79,7 +97,7 @@ def summarise_sample(name: str, path: str | Path) -> SampleSummary:
     control_rate = visits_control / n_control
     return SampleSummary(
         name=name,
-        path=Path(path).as_posix(),
+        path=_portable_path(path),
         n=int(n),
         treatment_rate=float(treatment_rate),
         visit_rate=float(visit_rate),

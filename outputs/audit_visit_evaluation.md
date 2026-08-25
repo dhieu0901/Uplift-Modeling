@@ -8,6 +8,8 @@
   `800,000` selection observations.
 - Primary targeting budget: `5.00%`.
 - Confidence level: `95.0%`.
+- Random seed: `777`. Every model seed is derived from it
+  and the model's name, so the run is a function of this number alone.
 - Candidate model and hyperparameter selection uses 3-fold out-of-fold predictions on the combined development sample;
   locked-test outcomes are excluded.
 - The champion is the candidate with the largest paired AIPW lower confidence
@@ -99,40 +101,40 @@ contrast because the campaign has a fixed operating budget.
 
 | stage            | model                   | fit_seconds |
 | ---------------- | ----------------------- | ----------- |
-| selection_fold_1 | random_targeting        | 0.000877    |
-| selection_fold_1 | response_model          | 9.349726    |
-| selection_fold_1 | s_learner               | 6.199379    |
-| selection_fold_1 | t_learner               | 11.701034   |
-| selection_fold_1 | x_learner               | 18.230446   |
-| selection_fold_1 | cvt                     | 4.019658    |
-| selection_fold_1 | transformed_outcome     | 0.271046    |
-| selection_fold_1 | r_learner               | 38.750115   |
-| selection_fold_1 | dr_learner              | 35.700297   |
-| selection_fold_1 | aipw_nuisance_t_learner | 5.346032    |
-| selection_fold_2 | random_targeting        | 0.000037    |
-| selection_fold_2 | response_model          | 3.795668    |
-| selection_fold_2 | s_learner               | 3.925186    |
-| selection_fold_2 | t_learner               | 5.139560    |
-| selection_fold_2 | x_learner               | 10.769543   |
-| selection_fold_2 | cvt                     | 3.627291    |
-| selection_fold_2 | transformed_outcome     | 0.233176    |
-| selection_fold_2 | r_learner               | 57.374990   |
-| selection_fold_2 | dr_learner              | 37.044634   |
-| selection_fold_2 | aipw_nuisance_t_learner | 4.122982    |
-| selection_fold_3 | random_targeting        | 0.000029    |
-| selection_fold_3 | response_model          | 3.186975    |
-| selection_fold_3 | s_learner               | 3.637845    |
-| selection_fold_3 | t_learner               | 4.996918    |
-| selection_fold_3 | x_learner               | 9.726127    |
-| selection_fold_3 | cvt                     | 3.327754    |
-| selection_fold_3 | transformed_outcome     | 0.225264    |
-| selection_fold_3 | r_learner               | 32.804152   |
-| selection_fold_3 | dr_learner              | 31.694309   |
-| selection_fold_3 | aipw_nuisance_t_learner | 5.307358    |
-| locked_test      | response_model          | 4.331643    |
-| locked_test      | random_targeting        | 0.000038    |
-| locked_test      | s_learner               | 5.636166    |
-| locked_test      | aipw_nuisance_t_learner | 6.904868    |
+| selection_fold_1 | random_targeting        | 0.003591    |
+| selection_fold_1 | response_model          | 8.199725    |
+| selection_fold_1 | s_learner               | 3.893411    |
+| selection_fold_1 | t_learner               | 5.084654    |
+| selection_fold_1 | x_learner               | 10.170901   |
+| selection_fold_1 | cvt                     | 3.153863    |
+| selection_fold_1 | transformed_outcome     | 0.252717    |
+| selection_fold_1 | r_learner               | 28.285710   |
+| selection_fold_1 | dr_learner              | 29.285037   |
+| selection_fold_1 | aipw_nuisance_t_learner | 5.146671    |
+| selection_fold_2 | random_targeting        | 0.000024    |
+| selection_fold_2 | response_model          | 3.641059    |
+| selection_fold_2 | s_learner               | 4.522144    |
+| selection_fold_2 | t_learner               | 4.386431    |
+| selection_fold_2 | x_learner               | 8.941083    |
+| selection_fold_2 | cvt                     | 3.046157    |
+| selection_fold_2 | transformed_outcome     | 0.243366    |
+| selection_fold_2 | r_learner               | 25.500111   |
+| selection_fold_2 | dr_learner              | 24.875201   |
+| selection_fold_2 | aipw_nuisance_t_learner | 3.800819    |
+| selection_fold_3 | random_targeting        | 0.000024    |
+| selection_fold_3 | response_model          | 3.096383    |
+| selection_fold_3 | s_learner               | 4.180495    |
+| selection_fold_3 | t_learner               | 6.848730    |
+| selection_fold_3 | x_learner               | 7.908040    |
+| selection_fold_3 | cvt                     | 2.768563    |
+| selection_fold_3 | transformed_outcome     | 0.232630    |
+| selection_fold_3 | r_learner               | 23.092197   |
+| selection_fold_3 | dr_learner              | 30.379771   |
+| selection_fold_3 | aipw_nuisance_t_learner | 5.490918    |
+| locked_test      | response_model          | 7.795543    |
+| locked_test      | random_targeting        | 0.000033    |
+| locked_test      | s_learner               | 4.947031    |
+| locked_test      | aipw_nuisance_t_learner | 5.040333    |
 
 ## Statistical Scope
 

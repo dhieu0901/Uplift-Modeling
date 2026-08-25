@@ -8,6 +8,8 @@
 - Realized average CATE: `0.014927`.
 - CATE standard deviation: `0.006983`.
 - Treatment propensity: `0.5000`.
+- Random seed: `42`, which fixes the response surfaces,
+  the treatment draw, and every model fitted below.
 - The response surfaces contain nonlinear terms and feature interactions.
 - Treatment is randomized and both potential-outcome probabilities are known.
 

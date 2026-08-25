@@ -20,13 +20,13 @@ taking them on trust.
 
 ## Measurements
 
-| name                   | path                                                              | n        | treatment_rate | visit_rate | conversion_rate | control_visit_rate | treated_visit_rate | visit_effect_pp | standard_error_pp | deviation_in_se |
-| ---------------------- | ----------------------------------------------------------------- | -------- | -------------- | ---------- | --------------- | ------------------ | ------------------ | --------------- | ----------------- | --------------- |
-| Population             | D:/code/Vinsmart Future/data/processed/criteo_indexed.parquet     | 13979592 | 0.850000       | 0.046992   | 0.002917        | 3.820096           | 4.854336           | 1.034240        | 0.014632          | 0.000000        |
-| Development            | D:/code/Vinsmart Future/data/processed/criteo_sample_500k.parquet | 500000   | 0.850104       | 0.047594   | 0.002946        | 3.942734           | 4.903400           | 0.960666        | 0.078424          | -0.938161       |
-| Conversion development | D:/code/Vinsmart Future/data/processed/criteo_sample_2m.parquet   | 2000000  | 0.849625       | 0.047087   | 0.002907        | 3.842049           | 4.862089           | 1.020040        | 0.038738          | -0.366566       |
-| Audit                  | D:/code/Vinsmart Future/data/processed/criteo_audit_1m.parquet    | 1000000  | 0.850017       | 0.047021   | 0.002919        | 3.781762           | 4.864491           | 1.082729        | 0.054503          | 0.889656        |
-| Confirmatory           | D:/code/Vinsmart Future/data/processed/criteo_confirm_4m.parquet  | 4000000  | 0.850285       | 0.046880   | 0.002906        | 3.833283           | 4.838525           | 1.005241        | 0.027403          | -1.058225       |
+| name                   | path                                      | n        | treatment_rate | visit_rate | conversion_rate | control_visit_rate | treated_visit_rate | visit_effect_pp | standard_error_pp | deviation_in_se |
+| ---------------------- | ----------------------------------------- | -------- | -------------- | ---------- | --------------- | ------------------ | ------------------ | --------------- | ----------------- | --------------- |
+| Population             | data/processed/criteo_indexed.parquet     | 13979592 | 0.850000       | 0.046992   | 0.002917        | 3.820096           | 4.854336           | 1.034240        | 0.014632          | 0.000000        |
+| Development            | data/processed/criteo_sample_500k.parquet | 500000   | 0.850104       | 0.047594   | 0.002946        | 3.942734           | 4.903400           | 0.960666        | 0.078424          | -0.938161       |
+| Conversion development | data/processed/criteo_sample_2m.parquet   | 2000000  | 0.849625       | 0.047087   | 0.002907        | 3.842049           | 4.862089           | 1.020040        | 0.038738          | -0.366566       |
+| Audit                  | data/processed/criteo_audit_1m.parquet    | 1000000  | 0.850017       | 0.047021   | 0.002919        | 3.781762           | 4.864491           | 1.082729        | 0.054503          | 0.889656        |
+| Confirmatory           | data/processed/criteo_confirm_4m.parquet  | 4000000  | 0.850285       | 0.046880   | 0.002906        | 3.833283           | 4.838525           | 1.005241        | 0.027403          | -1.058225       |
 
 ## What This Shows
 
