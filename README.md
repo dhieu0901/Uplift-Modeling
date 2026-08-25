@@ -11,14 +11,16 @@ uplift targeting delivers **+5,861 incremental visits at a 5% budget
 Two limits come with that number. The advantage is gone by a 20% budget. And
 for the rarer conversion outcome the same protocol reaches no conclusion at all.
 
-Every figure below is backed by a tracked file in [outputs/](outputs/).
+Every figure below is backed by a tracked file: a report in
+[outputs/](outputs/), or the [notebook](notebooks/) whose executed cell
+produced it.
 
 ## Decisions
 
 | Question | Decision | Evidence |
 |---|---|---|
 | Visit targeting | Adopt uplift targeting at 5%, then confirm live | +5,861 visits [4,851, 6,871] on 4M untouched users, z = 11.4 |
-| Which model | Treat the S-learner as one acceptable instance, not the proven best | It wins 8 of 10 repeated splits and never leaves the top two, but no candidate is measurably better than the one below it |
+| Which model | Treat the S-learner as one acceptable instance, not the proven best | Two independent tests agree. Varying the data, it wins 8 of 10 repeated splits and never leaves the top two. Varying the estimator underneath it, three base learners crown three different winners and it falls to 6th of 7 on a linear base. Neither test separates a winner from its runner-up |
 | Budget | Keep it tight | +47% at 5%, +15% at 10%, no measurable advantage at 20% or 30% |
 | Conversion | Keep response targeting | No interval excludes zero at any budget - no case for switching either way |
 | Next step | Run the randomized test in [online_experiment_design.md](outputs/online_experiment_design.md) | Offline evidence bounds what a live campaign might do; it does not replace it |
@@ -244,7 +246,9 @@ say the sample can rank these candidates without separating them. The defensible
 claim is therefore about the policy class: uplift targeting at a tight budget
 beats response targeting, and the S-learner is the instance that was locked before
 the confirmatory sample was drawn. These splits overlap, so they are a sensitivity
-analysis rather than ten independent experiments.
+analysis rather than ten independent experiments, and they hold the estimator
+fixed while they vary the data. The section below varies the estimator instead
+and arrives at the same conclusion, which is why the two are read together.
 
 ## Base Learners
 
