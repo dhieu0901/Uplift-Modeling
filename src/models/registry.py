@@ -62,6 +62,20 @@ def select_model_factories(
     crossfit_folds: int = 5,
     base_family: BaseLearnerFamily | str | None = None,
 ) -> dict[str, ModelFactory]:
+    """Build the named factories, with the reference policies added back.
+
+    The two references in ``REFERENCE_POLICIES`` are prepended whether or not
+    the caller asked for them, and always in that order. They are not
+    candidates: ``response_model`` is the bar every result is stated against and
+    ``random_targeting`` audits the estimator, so a run that omitted either
+    would produce contrasts with nothing to contrast against. Prepending rather
+    than appending puts them first in every report, ahead of anything that can
+    win.
+
+    Unknown names raise rather than being skipped, because a typo in a model
+    list would otherwise silently shrink the candidate set and change which
+    candidate the selection rule returns.
+    """
     registry = default_model_factories(
         crossfit_folds=crossfit_folds,
         base_family=base_family,
