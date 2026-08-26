@@ -14,6 +14,7 @@ Every number shown is traceable to a tracked file under ``outputs/``.
 
 from __future__ import annotations
 
+import html
 import inspect
 from pathlib import Path
 import sys
@@ -118,6 +119,28 @@ st.markdown(
   section[data-testid="stSidebar"] .block-container { padding-top: 2rem; }
 
   div[data-testid="stDataFrame"] { border: 1px solid #E2E2DA; border-radius: 4px; }
+
+  .ledger { width: 100%; border-collapse: separate; border-spacing: 0;
+              background: #FFFFFF; border: 1px solid #E2E2DA; border-radius: 4px;
+              font-size: 0.87rem; }
+  .ledger th { font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase;
+              font-weight: 600; color: #5C6975; background: #FBFBF9;
+              text-align: left; white-space: nowrap;
+              padding: 0.62rem 0.9rem; border-bottom: 1px solid #E2E2DA; }
+  .ledger td { padding: 0.55rem 0.9rem; border-bottom: 1px solid #EFEFE9;
+              color: #16202A; }
+  .ledger tr:last-child td { border-bottom: none; }
+  .ledger .num { text-align: right; white-space: nowrap;
+              font-variant-numeric: tabular-nums; }
+  .ledger .rank { width: 1%; text-align: right; color: #9AA4AE;
+              font-variant-numeric: tabular-nums; }
+  .ledger .name { font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+              font-size: 0.84rem; }
+  .ledger td.interval { color: #6B7883; }
+  .ledger tr.separated td.interval { color: #16202A; }
+  .ledger tr.separated .name { color: #0E6E64; font-weight: 600; }
+  .ledger tr.separated .rank { color: #0E6E64; }
+
   hr { border-color: #D9D9D1; margin: 2.2rem 0 1.6rem; }
 </style>
 """,
@@ -143,6 +166,54 @@ def fill_width(element) -> dict:
         if legacy in parameters:
             return {legacy: True}
     return {}
+
+
+def _ledger_cell(value, kind: str) -> tuple[str, str]:
+    """Return the CSS class and the printed text for one ledger cell."""
+    if kind == "rank":
+        return "rank", f"{int(value)}"
+    if kind == "signed":
+        return "num interval", f"{value:+,.0f}"
+    if kind == "ratio":
+        return "num", f"{float(value):.2f}x"
+    if kind == "name":
+        return "name", html.escape(str(value))
+    return "text", html.escape(str(value))
+
+
+def render_ledger(frame: pd.DataFrame, kinds: dict[str, str], separated=None) -> None:
+    """Draw a small results table as HTML instead of as a data grid.
+
+    ``st.dataframe`` formats numbers in the browser with sprintf, which has no
+    thousands flag. ``%+,.0f`` is therefore not a format it can parse, and a
+    column asking for one falls back to the raw float behind a warning icon in
+    every cell. These tables are read rather than sorted or filtered, so
+    printing them directly both fixes that and puts them in the same
+    typography as the rest of the page.
+
+    ``separated`` marks the rows whose interval clears zero, so the claim the
+    footnote counts is visible in the table itself. The sign already carries
+    that distinction, so the colour reinforces it rather than being the only
+    way to see it.
+    """
+    marked = [False] * len(frame) if separated is None else list(separated)
+    header = "".join(
+        f'<th class="{"num" if kinds[column] in ("signed", "ratio") else ""}">'
+        f"{html.escape(column)}</th>"
+        for column in frame.columns
+    )
+    body = []
+    for is_separated, (_, row) in zip(marked, frame.iterrows(), strict=True):
+        cells = "".join(
+            '<td class="{}">{}</td>'.format(*_ledger_cell(row[column], kinds[column]))
+            for column in frame.columns
+        )
+        body.append(f'<tr class="{"separated" if is_separated else ""}">{cells}</tr>')
+    st.markdown(
+        f'<table class="ledger"><thead><tr>{header}</tr></thead>'
+        f"<tbody>{''.join(body)}</tbody></table>",
+        unsafe_allow_html=True,
+    )
 
 
 def one_of(choice):
@@ -511,7 +582,7 @@ else:
                 "candidates, best first</div>",
                 unsafe_allow_html=True,
             )
-            st.dataframe(
+            render_ledger(
                 pd.DataFrame(
                     {
                         "Rank": table["Rank"],
@@ -521,13 +592,14 @@ else:
                         "High": table["upper_rate"] * campaign_size,
                     }
                 ),
-                hide_index=True,
-                column_config={
-                    "Extra visits": st.column_config.NumberColumn(format="%+,.0f"),
-                    "Low": st.column_config.NumberColumn(format="%+,.0f"),
-                    "High": st.column_config.NumberColumn(format="%+,.0f"),
+                {
+                    "Rank": "rank",
+                    "Candidate": "name",
+                    "Extra visits": "signed",
+                    "Low": "signed",
+                    "High": "signed",
                 },
-                **fill_width(st.dataframe),
+                separated=table["lower_rate"] > 0,
             )
             clearing = int((table["lower_rate"] > 0).sum())
             st.markdown(
@@ -549,16 +621,16 @@ else:
                 "Lead": families["Lead over runner-up"],
             }
         )
-        st.dataframe(
+        render_ledger(
             shown,
-            hide_index=True,
-            column_config={
-                "Extra visits": st.column_config.NumberColumn(format="%+,.0f"),
-                "Low": st.column_config.NumberColumn(format="%+,.0f"),
-                "High": st.column_config.NumberColumn(format="%+,.0f"),
-                "Lead": st.column_config.NumberColumn(format="%.2fx"),
+            {
+                "Prediction model": "text",
+                "Winner": "name",
+                "Extra visits": "signed",
+                "Low": "signed",
+                "High": "signed",
+                "Lead": "ratio",
             },
-            **fill_width(st.dataframe),
         )
 
         winners = sorted(set(families["Winner"]))
