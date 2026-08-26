@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 from sklearn.ensemble import (
@@ -85,6 +85,20 @@ def make_regressor(random_state: int = 42, **kwargs: Any):
         return HistGradientBoostingRegressor(**params)
 
 
+class EstimatorConstructor(Protocol):
+    """Takes the run's seed and returns a fresh, unfitted estimator.
+
+    The seed is declared optional because every family gives it a default, and
+    one caller depends on that: ``registry._scaled_logistic_regression`` builds
+    the linear family's classifier outside any seeded run. It can, because that
+    estimator is ``lbfgs`` logistic regression, which ignores the seed. Writing
+    the parameter as required would describe this field more narrowly than any
+    implementation of it, which is how a type stops being documentation.
+    """
+
+    def __call__(self, random_state: int = ..., /) -> Any: ...
+
+
 @dataclass(frozen=True)
 class BaseLearnerFamily:
     """The estimator pair a meta-learner is built on.
@@ -103,8 +117,8 @@ class BaseLearnerFamily:
     """
 
     name: str
-    classifier: Callable[[int], Any]
-    regressor: Callable[[int], Any]
+    classifier: EstimatorConstructor
+    regressor: EstimatorConstructor
 
 
 def gradient_boosting_family() -> BaseLearnerFamily:

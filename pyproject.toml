@@ -53,6 +53,39 @@ root = "."
 
 [tool.pyright]
 extraPaths = ["."]
+typeCheckingMode = "standard"
+
+# Type checking is not a gate in this project; ruff, the test suite, and CI are.
+# What this section does is keep the editor's Problems panel worth reading.
+#
+# pandas 3 and numpy 2 annotate ordinary operations with wide unions. `df[col]`
+# is a Series or an Index or a DatetimeIndex or an ExtensionArray, so calling
+# anything Series-shaped on the result is an error against every member but
+# one. Run over this repository, the rules below produced 315 diagnostics and
+# zero defects. Every category was read: `sys.stdout.reconfigure` behind its
+# own `hasattr` guard, `int()` on a value pandas types as a union,
+# `sort_values` failing overload resolution, `fetchone()[0]` on a
+# `SELECT count(*)`. A signal with no true positives does not just waste
+# attention, it buries the signals that have some, so these are turned off by
+# name rather than left to be ignored by habit.
+#
+# By name, and not by dropping the whole mode to "off", because the rules that
+# do not depend on third-party stubs still catch real mistakes and stay on:
+# undefined names, unresolved imports, unreachable code, a redeclared symbol, a
+# method missing its `self`.
+#
+# The one diagnostic that was about this code was fixed instead of suppressed.
+# `BaseLearnerFamily.classifier` was typed `Callable[[int], Any]` while every
+# implementation defaults the seed and one caller depends on that default; it
+# is a Protocol saying so now. See `src/models/base.py`.
+reportArgumentType = "none"
+reportAttributeAccessIssue = "none"
+reportCallIssue = "none"
+reportIndexIssue = "none"
+reportOperatorIssue = "none"
+reportOptionalMemberAccess = "none"
+reportOptionalSubscript = "none"
+reportReturnType = "none"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

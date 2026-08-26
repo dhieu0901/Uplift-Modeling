@@ -1,0 +1,19 @@
+{
+  // The type-checking rules themselves live in pyproject.toml under
+  // [tool.pyright], so they apply to the pyright CLI and to any editor, not
+  // only to this one. This file settles the two things that are properties of
+  // the checkout rather than of the project.
+
+  // Resolving imports against an interpreter that lacks the project's packages
+  // is the other way this panel fills with findings that are not about the
+  // code. Point at the environment the README's install instructions build.
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+
+  // Analyse what is open. Whole-workspace analysis reports the same things a
+  // full `pyright .` run does, which belongs in a terminal where it can be
+  // read once, not in a panel that has to stay actionable while editing.
+  "python.analysis.diagnosticMode": "openFilesOnly",
+
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"]
+}
